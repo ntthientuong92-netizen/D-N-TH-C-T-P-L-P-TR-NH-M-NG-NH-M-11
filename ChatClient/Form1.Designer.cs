@@ -26,6 +26,8 @@
             this.btnEmoji1 = new System.Windows.Forms.Button();
             this.btnEmoji2 = new System.Windows.Forms.Button();
             this.btnEmoji3 = new System.Windows.Forms.Button();
+            this.btnEmoji4 = new System.Windows.Forms.Button();
+            this.btnEmoji5 = new System.Windows.Forms.Button();
             this.SuspendLayout();
             
             // txtServerIP
@@ -86,6 +88,20 @@
             this.btnEmoji3.Text = "🔥";
             this.btnEmoji3.Click += (s, e) => txtMessage.Text += " 🔥 ";
 
+           // btnEmoji4
+           this.btnEmoji4.Location = new System.Drawing.Point(135, 355);
+           this.btnEmoji4.Size = new System.Drawing.Size(35, 28);
+           this.btnEmoji4.Text = "😂";
+           this.btnEmoji4.Click += (s, e) => txtMessage.Text += " 😂 ";
+           // btnEmoji5
+           this.btnEmoji5.Location = new System.Drawing.Point(176, 355);
+           this.btnEmoji5.Size = new System.Drawing.Size(35, 28);
+           this.btnEmoji5.Text = "👍";
+           this.btnEmoji5.Click += (s, e) => txtMessage.Text += " 👍 ";
+
+    
+
+
             // txtMessage
             this.txtMessage.Location = new System.Drawing.Point(140, 358);
             this.txtMessage.Name = "txtMessage";
@@ -112,10 +128,12 @@
             this.Controls.Add(this.btnEmoji1);
             this.Controls.Add(this.btnEmoji2);
             this.Controls.Add(this.btnEmoji3);
+            this.Controls.Add(this.btnEmoji4);
+            this.Controls.Add(this.btnEmoji5);
             this.Controls.Add(this.txtMessage);
             this.Controls.Add(this.btnSend);
             this.Name = "Form1";
-            this.Text = "UDM_08 - Chat TCP Client (Pro Max)";
+            this.Text = "UDM_08 - Chat TCP Client (Group 11)";
             this.ResumeLayout(false);
             this.PerformLayout();
         }
@@ -131,5 +149,7 @@
         private System.Windows.Forms.Button btnEmoji1;
         private System.Windows.Forms.Button btnEmoji2;
         private System.Windows.Forms.Button btnEmoji3;
+        private System.Windows.Forms.Button btnEmoji4;
+        private System.Windows.Forms.Button btnEmoji5;
     }
 }
