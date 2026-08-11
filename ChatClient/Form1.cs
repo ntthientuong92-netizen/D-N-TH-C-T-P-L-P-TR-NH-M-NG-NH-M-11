@@ -122,6 +122,10 @@ namespace ChatClient
                         Invoke(new Action(() =>
                         {
                             string displayPrefix = string.IsNullOrEmpty(msg.AvatarBase64) ? "" : "[Có Ảnh] ";
+                            if (msg.MessageType == "Reply")
+                            {
+                                txtChatContent.AppendText($"    ↳ Trả lời {msg.OriginalMessage}\n");
+                            }
                             txtChatContent.AppendText($"{displayPrefix}[{msg.Sender}]: {msg.Content}\n");
                         }));
                     }
