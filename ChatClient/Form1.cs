@@ -91,6 +91,8 @@ namespace ChatClient
                     {
                         Invoke(new Action(() =>
                         {
+                            var bubble = new MessageBubbleControl(msg.Sender, msg.Content, msg.AvatarBase64, isMine: false);
+                            pnlChatContent.Controls.Add(bubble);
                             string displayPrefix = string.IsNullOrEmpty(msg.AvatarBase64) ? "" : "[Có Ảnh] ";
                             txtChatContent.AppendText($"{displayPrefix}[{msg.Sender}]: {msg.Content}\n");
                         }));
