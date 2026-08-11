@@ -13,10 +13,27 @@ namespace ChatClient
         private StreamReader? reader;
         private StreamWriter? writer;
         private string avatarBase64 = "";
+        private string replyTo = "";
 
         public Form1()
         {
             InitializeComponent();
+            txtChatContent.DoubleClick += txtChatContent_DoubleClick;
+        }
+
+        // Double-click vào 1 dòng tin nhắn để chọn trả lời tin đó
+        private void txtChatContent_DoubleClick(object? sender, EventArgs e)
+        {
+            int line = txtChatContent.GetLineFromCharIndex(txtChatContent.SelectionStart);
+            if (line >= 0 && line < txtChatContent.Lines.Length)
+            {
+                string selected = txtChatContent.Lines[line];
+                if (!string.IsNullOrWhiteSpace(selected) && !selected.StartsWith("    ↳"))
+                {
+                    replyTo = selected;
+                    this.Text = "Đang trả lời: " + selected;
+                }
+            }
         }
 
         private async void btnConnect_Click(object sender, EventArgs e)
@@ -91,8 +108,6 @@ namespace ChatClient
                     {
                         Invoke(new Action(() =>
                         {
-                            var bubble = new MessageBubbleControl(msg.Sender, msg.Content, msg.AvatarBase64, isMine: false);
-                            pnlChatContent.Controls.Add(bubble);
                             string displayPrefix = string.IsNullOrEmpty(msg.AvatarBase64) ? "" : "[Có Ảnh] ";
                             txtChatContent.AppendText($"{displayPrefix}[{msg.Sender}]: {msg.Content}\n");
                         }));
