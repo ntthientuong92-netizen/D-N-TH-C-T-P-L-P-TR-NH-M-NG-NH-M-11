@@ -83,14 +83,27 @@ namespace ChatClient
                     Timestamp = DateTime.Now
                 };
 
+                if (!string.IsNullOrEmpty(replyTo))
+                {
+                    msg.MessageType = "Reply";
+                    msg.OriginalMessage = replyTo;
+                }
+
                 string json = System.Text.Json.JsonSerializer.Serialize(msg);
                 if (writer != null)
                 {
                     await writer.WriteLineAsync(json);
                 }
 
+                if (!string.IsNullOrEmpty(replyTo))
+                {
+                    txtChatContent.AppendText($"    ↳ Trả lời {replyTo}\n");
+                }
                 txtChatContent.AppendText($"[Tôi]: {msg.Content}\n");
+
                 txtMessage.Clear();
+                replyTo = "";
+                this.Text = "Chat TCP Client(Group 11)";
             }
         }
 
