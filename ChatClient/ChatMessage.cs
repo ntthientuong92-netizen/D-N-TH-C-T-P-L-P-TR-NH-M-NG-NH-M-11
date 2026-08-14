@@ -10,6 +10,7 @@ namespace ChatClient
         public string AvatarBase64 { get; set; }
         public string MessageType { get; set; }
         public string OriginalMessage { get; set; }
+        public string OriginalSender { get; set; }
         public DateTime Timestamp { get; set; } = DateTime.Now;
     }
 }

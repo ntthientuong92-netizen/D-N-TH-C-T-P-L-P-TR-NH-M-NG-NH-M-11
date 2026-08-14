@@ -23,6 +23,8 @@
             this.txtChatContent = new System.Windows.Forms.RichTextBox();
             this.txtMessage = new System.Windows.Forms.TextBox();
             this.btnSend = new System.Windows.Forms.Button();
+            this.txtForwardTo = new System.Windows.Forms.TextBox();
+            this.btnForward = new System.Windows.Forms.Button();
             this.btnEmoji1 = new System.Windows.Forms.Button();
             this.btnEmoji2 = new System.Windows.Forms.Button();
             this.btnEmoji3 = new System.Windows.Forms.Button();
@@ -113,10 +115,21 @@
             this.btnSend.UseVisualStyleBackColor = true;
             this.btnSend.Click += new System.EventHandler(this.btnSend_Click);
 
-          
+            this.txtForwardTo.Location = new System.Drawing.Point(12, 395);
+            this.txtForwardTo.Name = "txtForwardTo";
+            this.txtForwardTo.Size = new System.Drawing.Size(200, 22);
+
+            this.btnForward.Location = new System.Drawing.Point(220, 392);
+            this.btnForward.Name = "btnForward";
+            this.btnForward.Size = new System.Drawing.Size(110, 28);
+            this.btnForward.Text = "Chuyển tiếp";
+            this.btnForward.UseVisualStyleBackColor = true;
+            this.btnForward.Click += new System.EventHandler(this.btnForward_Click);
+
+
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(790, 400);
+            this.ClientSize = new System.Drawing.Size(790, 440);
             this.Controls.Add(this.txtServerIP);
             this.Controls.Add(this.txtPort);
             this.Controls.Add(this.txtName);
@@ -130,6 +143,8 @@
             this.Controls.Add(this.btnEmoji5);
             this.Controls.Add(this.txtMessage);
             this.Controls.Add(this.btnSend);
+            this.Controls.Add(this.txtForwardTo);
+            this.Controls.Add(this.btnForward);
             this.Name = "Form1";
             this.Text = "Chat TCP Client(Group 11)";
             this.ResumeLayout(false);
@@ -144,6 +159,8 @@
         private System.Windows.Forms.RichTextBox txtChatContent;
         private System.Windows.Forms.TextBox txtMessage;
         private System.Windows.Forms.Button btnSend;
+        private System.Windows.Forms.TextBox txtForwardTo;
+        private System.Windows.Forms.Button btnForward;
         private System.Windows.Forms.Button btnEmoji1;
         private System.Windows.Forms.Button btnEmoji2;
         private System.Windows.Forms.Button btnEmoji3;

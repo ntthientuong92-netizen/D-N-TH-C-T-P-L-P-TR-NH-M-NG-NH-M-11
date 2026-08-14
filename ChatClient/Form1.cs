@@ -76,7 +76,41 @@ namespace ChatClient
                 txtMessage.Clear();
             }
         }
+        private async void btnForward_Click(object sender, EventArgs e)
+        {
+            string selectedText = txtChatContent.SelectedText.Trim();
+            if (string.IsNullOrEmpty(selectedText))
+            {
+                MessageBox.Show("Vui lòng bôi đen đoạn tin nhắn muốn chuyển tiếp.");
+                return;
+            }
 
+            string receiver = txtForwardTo.Text.Trim();
+            if (string.IsNullOrEmpty(receiver))
+            {
+                MessageBox.Show("Vui lòng nhập tên người nhận.");
+                return;
+            }
+
+            if (client == null || !client.Connected || writer == null)
+            {
+                MessageBox.Show("Bạn chưa kết nối tới Server.");
+                return;
+            }
+
+            var originalMsg = new ChatMessage
+            {
+                Sender = txtName.Text,
+                Content = selectedText
+            };
+
+            ChatMessage forwardMsg = ForwardMessageHelper.CreateForwardMessage(originalMsg, txtName.Text, receiver);
+
+            string json = System.Text.Json.JsonSerializer.Serialize(forwardMsg);
+            await writer.WriteLineAsync(json);
+
+            txtChatContent.AppendText($"↪ [Đã forward tới {receiver}] {selectedText}\n");
+        }
         private async Task ReceiveMessagesAsync()
         {
             try
@@ -92,9 +126,17 @@ namespace ChatClient
                         Invoke(new Action(() =>
                         {
                             var bubble = new MessageBubbleControl(msg.Sender, msg.Content, msg.AvatarBase64, isMine: false);
-                            pnlChatContent.Controls.Add(bubble);
+                            txtChatContent.Controls.Add(bubble);
                             string displayPrefix = string.IsNullOrEmpty(msg.AvatarBase64) ? "" : "[Có Ảnh] ";
-                            txtChatContent.AppendText($"{displayPrefix}[{msg.Sender}]: {msg.Content}\n");
+
+                            if (msg.MessageType == "Forward")
+                            {
+                                txtChatContent.AppendText($"↪ [Chuyển tiếp từ {msg.OriginalSender}, gửi bởi {msg.Sender}]: {msg.Content}\n");
+                            }
+                            else
+                            {
+                                txtChatContent.AppendText($"{displayPrefix}[{msg.Sender}]: {msg.Content}\n");
+                            }
                         }));
                     }
                 }
