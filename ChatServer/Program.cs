@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -32,20 +33,18 @@ class Server
 
     private static async Task HandleClientAsync(TcpClient client)
     {
-        var stream = client.GetStream();
-        byte[] buffer = new byte[8192];
+        using StreamReader reader = new StreamReader(client.GetStream(), Encoding.UTF8);
 
         try
         {
             while (true)
             {
-                int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-                if (bytesRead == 0) break;
+                string? jsonMessage = await reader.ReadLineAsync();
+                if (string.IsNullOrEmpty(jsonMessage)) break;
 
-                string jsonMessage = Encoding.UTF8.GetString(buffer, 0, bytesRead);
                 Console.WriteLine($"[NHẬN]: {jsonMessage}");
 
-                Broadcast(jsonMessage, client);
+                await BroadcastAsync(jsonMessage, client);
             }
         }
         catch (Exception ex)
@@ -63,22 +62,24 @@ class Server
         }
     }
 
-    private static void Broadcast(string message, TcpClient excludeClient)
+    private static async Task BroadcastAsync(string message, TcpClient excludeClient)
     {
-        byte[] data = Encoding.UTF8.GetBytes(message);
+        List<TcpClient> targetClients;
         lock (lockObj)
         {
-            foreach (var client in clients)
+            targetClients = new List<TcpClient>(clients);
+        }
+
+        foreach (var c in targetClients)
+        {
+            if (c != excludeClient)
             {
-                if (client != excludeClient)
+                try
                 {
-                    try
-                    {
-                        var stream = client.GetStream();
-                        stream.Write(data, 0, data.Length);
-                    }
-                    catch { }
+                    StreamWriter writer = new StreamWriter(c.GetStream(), Encoding.UTF8) { AutoFlush = true };
+                    await writer.WriteLineAsync(message);
                 }
+                catch { }
             }
         }
     }
