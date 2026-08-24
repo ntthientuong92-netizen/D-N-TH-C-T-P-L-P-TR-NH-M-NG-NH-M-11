@@ -1,6 +1,0 @@
-C:\Users\ntthi\OneDrive\Desktop\UDM_08_Chat_TCP_11\UDM_08_Chat_TCP\ChatClient\obj\Debug\net10.0-windows\ChatClient.csproj.AssemblyReference.cache
-C:\Users\ntthi\OneDrive\Desktop\UDM_08_Chat_TCP_11\UDM_08_Chat_TCP\ChatClient\obj\Debug\net10.0-windows\ChatClient.GeneratedMSBuildEditorConfig.editorconfig
-C:\Users\ntthi\OneDrive\Desktop\UDM_08_Chat_TCP_11\UDM_08_Chat_TCP\ChatClient\obj\Debug\net10.0-windows\ChatClient.AssemblyInfoInputs.cache
-C:\Users\ntthi\OneDrive\Desktop\UDM_08_Chat_TCP_11\UDM_08_Chat_TCP\ChatClient\obj\Debug\net10.0-windows\ChatClient.AssemblyInfo.cs
-C:\Users\ntthi\OneDrive\Desktop\UDM_08_Chat_TCP_11\UDM_08_Chat_TCP\ChatClient\obj\Debug\net10.0-windows\ChatClient.csproj.CoreCompileInputs.cache
-C:\Users\ntthi\OneDrive\Desktop\UDM_08_Chat_TCP_11\UDM_08_Chat_TCP\ChatClient\obj\Debug\net10.0-windows\ChatClient.sourcelink.json
