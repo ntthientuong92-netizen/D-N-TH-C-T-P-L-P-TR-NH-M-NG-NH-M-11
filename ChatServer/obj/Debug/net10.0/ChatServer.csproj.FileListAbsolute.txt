@@ -4,3 +4,16 @@ C:\Users\ntthi\OneDrive\Desktop\UDM_08_Chat_TCP_11\UDM_08_Chat_TCP\ChatServer\ob
 C:\Users\ntthi\OneDrive\Desktop\UDM_08_Chat_TCP_11\UDM_08_Chat_TCP\ChatServer\obj\Debug\net10.0\ChatServer.AssemblyInfo.cs
 C:\Users\ntthi\OneDrive\Desktop\UDM_08_Chat_TCP_11\UDM_08_Chat_TCP\ChatServer\obj\Debug\net10.0\ChatServer.csproj.CoreCompileInputs.cache
 C:\Users\ntthi\OneDrive\Desktop\UDM_08_Chat_TCP_11\UDM_08_Chat_TCP\ChatServer\obj\Debug\net10.0\ChatServer.sourcelink.json
+C:\Users\ntthi\OneDrive\Desktop\UDM_08_Chat_TCP_11\UDM_08_Chat_TCP\ChatServer\bin\Debug\net10.0\ChatServer.exe
+C:\Users\ntthi\OneDrive\Desktop\UDM_08_Chat_TCP_11\UDM_08_Chat_TCP\ChatServer\bin\Debug\net10.0\ChatServer.deps.json
+C:\Users\ntthi\OneDrive\Desktop\UDM_08_Chat_TCP_11\UDM_08_Chat_TCP\ChatServer\bin\Debug\net10.0\ChatServer.runtimeconfig.json
+C:\Users\ntthi\OneDrive\Desktop\UDM_08_Chat_TCP_11\UDM_08_Chat_TCP\ChatServer\bin\Debug\net10.0\ChatServer.dll
+C:\Users\ntthi\OneDrive\Desktop\UDM_08_Chat_TCP_11\UDM_08_Chat_TCP\ChatServer\bin\Debug\net10.0\ChatServer.pdb
+C:\Users\ntthi\OneDrive\Desktop\UDM_08_Chat_TCP_11\UDM_08_Chat_TCP\ChatServer\bin\Debug\net10.0\SharedLibrary.dll
+C:\Users\ntthi\OneDrive\Desktop\UDM_08_Chat_TCP_11\UDM_08_Chat_TCP\ChatServer\bin\Debug\net10.0\SharedLibrary.pdb
+C:\Users\ntthi\OneDrive\Desktop\UDM_08_Chat_TCP_11\UDM_08_Chat_TCP\ChatServer\obj\Debug\net10.0\ChatServer.csproj.Up2Date
+C:\Users\ntthi\OneDrive\Desktop\UDM_08_Chat_TCP_11\UDM_08_Chat_TCP\ChatServer\obj\Debug\net10.0\ChatServer.dll
+C:\Users\ntthi\OneDrive\Desktop\UDM_08_Chat_TCP_11\UDM_08_Chat_TCP\ChatServer\obj\Debug\net10.0\refint\ChatServer.dll
+C:\Users\ntthi\OneDrive\Desktop\UDM_08_Chat_TCP_11\UDM_08_Chat_TCP\ChatServer\obj\Debug\net10.0\ChatServer.pdb
+C:\Users\ntthi\OneDrive\Desktop\UDM_08_Chat_TCP_11\UDM_08_Chat_TCP\ChatServer\obj\Debug\net10.0\ChatServer.genruntimeconfig.cache
+C:\Users\ntthi\OneDrive\Desktop\UDM_08_Chat_TCP_11\UDM_08_Chat_TCP\ChatServer\obj\Debug\net10.0\ref\ChatServer.dll

@@ -1,4 +1,6 @@
 using System;
+using System.Text;
+using System.Threading;
 
 namespace ChatServer
 {
@@ -6,22 +8,34 @@ namespace ChatServer
     {
         static void Main(string[] args)
         {
-            Console.OutputEncoding = System.Text.Encoding.UTF8;
+            Console.OutputEncoding = Encoding.UTF8;
             int port = 8888;
 
-            ServerCore server = new ServerCore(port);
-            server.Start();
+            ServerLogger.Log("========================================");
+            ServerLogger.Log("    HỆ THỐNG TCP CHAT SERVER - NHÓM 18   ");
+            ServerLogger.Log("========================================");
 
-            Console.WriteLine("Nhấn phím 'Q' để dừng Server...");
-            while (true)
+            ServerCore server = new ServerCore(port);
+
+            Thread serverThread = new Thread(() =>
             {
-                var key = Console.ReadKey(true);
-                if (key.Key == ConsoleKey.Q)
-                {
-                    server.Stop();
-                    break;
-                }
-            }
+                server.Start();
+            });
+            serverThread.IsBackground = true;
+            serverThread.Start();
+
+            ServerLogger.Log("Server đang chạy ngầm...");
+            ServerLogger.Log("Nhấn phím [Enter] hoặc gõ 'exit' rồi Enter để tắt Server.");
+
+            string input;
+            do
+            {
+                input = Console.ReadLine();
+            } while (input != null && input.ToLower() != "exit");
+
+            ServerLogger.Log("Đang tiến hành đóng Server...");
+            server.Stop();
+            ServerLogger.Log("Đã thoát ứng dụng Server thành công.");
         }
     }
 }
