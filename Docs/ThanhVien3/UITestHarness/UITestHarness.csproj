@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Harness chụp màn hình minh chứng cho Báo cáo Phần 3 / TC_05 (Thành viên 3).
+    Cách chạy (sau khi đã cài .NET 10 SDK), từ thư mục gốc của repo:
+      dotnet run với project là Docs/ThanhVien3/UITestHarness/UITestHarness.csproj
+    Harness có sẵn mock server (không cần chạy ChatServer trước).
+    Ảnh xuất ra: Docs/ThanhVien3/AnhMinhChung/
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>disable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\ChatClient\ChatClient.csproj" />
+    <ProjectReference Include="..\..\..\SharedLibrary\SharedLibrary.csproj" />
+  </ItemGroup>
+</Project>
