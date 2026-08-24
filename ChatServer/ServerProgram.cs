@@ -12,7 +12,7 @@ namespace ChatServer
             int port = 8888;
 
             ServerLogger.Log("========================================");
-            ServerLogger.Log("    HỆ THỐNG TCP CHAT SERVER - NHÓM 18   ");
+            ServerLogger.Log("    HỆ THỐNG TCP CHAT SERVER - NHÓM 11   ");
             ServerLogger.Log("========================================");
 
             ServerCore server = new ServerCore(port);
