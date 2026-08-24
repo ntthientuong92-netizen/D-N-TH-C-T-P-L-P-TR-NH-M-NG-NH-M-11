@@ -25,7 +25,6 @@ namespace ChatClient
                 stream = client.GetStream();
                 isConnected = true;
 
-                // Gửi gói tin đăng nhập kèm Avatar
                 MessagePacket loginPacket = new MessagePacket
                 {
                     Type = PacketType.Login,
@@ -36,7 +35,6 @@ namespace ChatClient
                 };
                 NetworkProtocol.SendPacket(stream, loginPacket);
 
-                // Khởi động luồng lắng nghe tin nhắn từ Server
                 receiveThread = new Thread(ReceiveLoop);
                 receiveThread.IsBackground = true;
                 receiveThread.Start();
@@ -63,7 +61,6 @@ namespace ChatClient
             }
             catch
             {
-                // Mất kết nối
             }
             finally
             {
@@ -84,6 +81,18 @@ namespace ChatClient
                     Console.WriteLine("Lỗi gửi tin: " + ex.Message);
                 }
             }
+        }
+
+        public void SendReply(string sender, string content, string replyToContent, string avatarBase64)
+        {
+            MessagePacket packet = MessageProcessor.CreateReplyPacket(sender, content, replyToContent, avatarBase64);
+            SendMessage(packet);
+        }
+
+        public void SendForward(string sender, string originalContent, string avatarBase64)
+        {
+            MessagePacket packet = MessageProcessor.CreateForwardPacket(sender, originalContent, avatarBase64);
+            SendMessage(packet);
         }
 
         public void Disconnect()

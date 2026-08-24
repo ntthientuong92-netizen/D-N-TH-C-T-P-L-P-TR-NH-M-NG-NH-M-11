@@ -1,20 +1,49 @@
+using System;
 using SharedLibrary;
 
 namespace ChatClient
 {
     public static class MessageProcessor
     {
+        public static MessagePacket CreateReplyPacket(string sender, string content,
+                                                      string replyToContent, string avatarBase64)
+        {
+            return new MessagePacket
+            {
+                Type = PacketType.Reply,
+                Sender = sender,
+                Receiver = "All",
+                Content = content,
+                ReplyToContent = replyToContent,
+                AvatarBase64 = avatarBase64
+            };
+        }
+
+        public static MessagePacket CreateForwardPacket(string sender, string originalContent,
+                                                        string avatarBase64)
+        {
+            return new MessagePacket
+            {
+                Type = PacketType.Forward,
+                Sender = sender,
+                Receiver = "All",
+                Content = originalContent,
+                AvatarBase64 = avatarBase64
+            };
+        }
+
         public static string FormatMessageDisplay(MessagePacket packet)
         {
             string display = "";
-            if (!string.IsNullOrEmpty(packet.ReplyToContent))
+
+            if (packet.Type == PacketType.Reply && !string.IsNullOrEmpty(packet.ReplyToContent))
             {
-                display += $"[Replying to: \"{packet.ReplyToContent}\"]\r\n";
+                display += $"   ↳ Trả lời: \"{packet.ReplyToContent}\"\r\n";
             }
 
             if (packet.Type == PacketType.Forward)
             {
-                display += $"[Forwarded from {packet.Sender}]: {packet.Content}";
+                display += $"[Chuyển tiếp từ {packet.Sender}]: {packet.Content}";
             }
             else
             {

@@ -151,18 +151,14 @@ namespace ChatClient
             string content = txtMessage.Text.Trim();
             if (string.IsNullOrEmpty(content)) return;
 
-            MessagePacket packet = new MessagePacket
+            if (string.IsNullOrEmpty(lastSelectedMessage))
             {
-                Type = PacketType.Reply,
-                Sender = username,
-                Receiver = "All",
-                Content = content,
-                ReplyToContent = lastSelectedMessage,
-                AvatarBase64 = avatarBase64
-            };
+                MessageBox.Show("Chưa có tin nhắn nào để trả lời!");
+                return;
+            }
 
-            chatController.SendMessage(packet);
-            txtChatBox.AppendText($"[Tôi (Reply \"{lastSelectedMessage}\")]: {content}\r\n");
+            chatController.SendReply(username, content, lastSelectedMessage, avatarBase64);
+            txtChatBox.AppendText($"[Tôi] ↳ Trả lời \"{lastSelectedMessage}\": {content}\r\n");
             txtMessage.Clear();
         }
 
@@ -174,17 +170,8 @@ namespace ChatClient
                 return;
             }
 
-            MessagePacket packet = new MessagePacket
-            {
-                Type = PacketType.Forward,
-                Sender = username,
-                Receiver = "All",
-                Content = lastSelectedMessage,
-                AvatarBase64 = avatarBase64
-            };
-
-            chatController.SendMessage(packet);
-            txtChatBox.AppendText($"[Tôi (Forward)]: {lastSelectedMessage}\r\n");
+            chatController.SendForward(username, lastSelectedMessage, avatarBase64);
+            txtChatBox.AppendText($"[Tôi] Chuyển tiếp: {lastSelectedMessage}\r\n");
         }
 
         private void ChatController_OnMessageReceived(MessagePacket packet)
