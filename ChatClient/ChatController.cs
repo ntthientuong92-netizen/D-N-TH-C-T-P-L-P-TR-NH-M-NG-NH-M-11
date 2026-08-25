@@ -22,7 +22,11 @@ namespace ChatClient
             {
                 client = new TcpClient();
                 client.Connect(ip, port);
+                ResourceCleanup.Track(client);
+                
                 stream = client.GetStream();
+                ResourceCleanup.Track(stream);
+                
                 isConnected = true;
 
                 // Gửi gói tin đăng nhập kèm Avatar
@@ -32,7 +36,7 @@ namespace ChatClient
                     Sender = username,
                     Receiver = "Server",
                     AvatarBase64 = avatarBase64,
-                    Content = $"{username} đã tham gia phòng chat."
+                    Content = $"{username} đã tham gia phòng chat. {EmojiHelper.GetRandomGreetingEmoji()}"
                 };
                 NetworkProtocol.SendPacket(stream, loginPacket);
 
