@@ -66,6 +66,7 @@ namespace ChatClient
                     using (MemoryStream ms = new MemoryStream(bytes))
                     {
                         myAvatar = new Bitmap(ms);
+                        ResourceCleanup.Track(myAvatar); // TV5: Theo dõi avatar để giải phóng RAM
                     }
                     picAvatar.Invalidate();
                     UpdateSelfContact();
@@ -108,6 +109,8 @@ namespace ChatClient
             string content = txtMessage.Text.Trim();
             if (string.IsNullOrEmpty(content)) return;
 
+            content = EmojiHelper.ParseEmojisFromText(content); // TV5: Chuyển đổi text thành Emoji bằng Regex
+
             MessagePacket packet = new MessagePacket
             {
                 Type = PacketType.Chat,
@@ -132,6 +135,8 @@ namespace ChatClient
                 MessageBox.Show("Hãy bấm chọn một tin nhắn trong khung chat để trả lời!");
                 return;
             }
+
+            content = EmojiHelper.ParseEmojisFromText(content); // TV5: Chuyển đổi text thành Emoji bằng Regex
 
             MessagePacket packet = new MessagePacket
             {
@@ -224,6 +229,7 @@ namespace ChatClient
         {
             formClosing = true;
             chatController.Disconnect();
+            ResourceCleanup.DisposeAll(); // TV5: Giải phóng toàn bộ tài nguyên khi tắt form
         }
 
         // ===== Quản lý bong bóng chat trong khu vực chat =====
