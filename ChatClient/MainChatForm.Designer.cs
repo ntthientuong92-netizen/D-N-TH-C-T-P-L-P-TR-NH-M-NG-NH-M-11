@@ -3,12 +3,6 @@ using System.Windows.Forms;
 
 namespace ChatClient
 {
-    /// <summary>
-    /// Phần thiết kế giao diện (Designer) của MainChatForm.
-    /// Toàn bộ layout được tạo bằng code GUI: thanh kết nối phía trên,
-    /// danh sách liên hệ bên trái, khu vực chat bong bóng ở giữa,
-    /// bảng emoji + ô nhập tin nhắn phía dưới.
-    /// </summary>
     partial class MainChatForm
     {
         private System.ComponentModel.IContainer components = null;
@@ -67,35 +61,43 @@ namespace ChatClient
             lblIp.Text = "Server IP:";
             lblIp.Location = new Point(12, 15);
             lblIp.Width = 62;
+            lblIp.Anchor = AnchorStyles.Left | AnchorStyles.Top;
 
             txtServerIp.Text = "127.0.0.1";
             txtServerIp.Location = new Point(76, 12);
             txtServerIp.Width = 100;
+            txtServerIp.Anchor = AnchorStyles.Left | AnchorStyles.Top;
 
             lblUser.Text = "Tên:";
             lblUser.Location = new Point(186, 15);
             lblUser.Width = 36;
+            lblUser.Anchor = AnchorStyles.Left | AnchorStyles.Top;
 
             txtUsername.Location = new Point(224, 12);
             txtUsername.Width = 110;
+            txtUsername.Anchor = AnchorStyles.Left | AnchorStyles.Top;
 
             btnConnect.Text = "Kết nối";
             btnConnect.Location = new Point(344, 10);
             btnConnect.Size = new Size(80, 27);
+            btnConnect.Anchor = AnchorStyles.Left | AnchorStyles.Top;
 
             picAvatar.Location = new Point(440, 8);
             picAvatar.Size = new Size(36, 36);
             picAvatar.SizeMode = PictureBoxSizeMode.Zoom;
+            picAvatar.Anchor = AnchorStyles.Left | AnchorStyles.Top;
             picAvatar.Paint += PicAvatar_Paint;
 
             btnSelectAvatar.Text = "Chọn Avatar";
             btnSelectAvatar.Location = new Point(482, 10);
             btnSelectAvatar.Size = new Size(95, 27);
+            btnSelectAvatar.Anchor = AnchorStyles.Left | AnchorStyles.Top;
 
             lblStatus.Text = "◌ Chưa kết nối";
             lblStatus.Location = new Point(600, 16);
             lblStatus.Width = 200;
             lblStatus.ForeColor = Color.Gray;
+            lblStatus.Anchor = AnchorStyles.Left | AnchorStyles.Top;
 
             panelTop.Controls.AddRange(new Control[] { lblIp, txtServerIp, lblUser, txtUsername, btnConnect, picAvatar, btnSelectAvatar, lblStatus });
 
@@ -107,6 +109,7 @@ namespace ChatClient
             panelContacts.Dock = DockStyle.Left;
             panelContacts.Width = 216;
             panelContacts.BackColor = Color.FromArgb(247, 247, 247);
+            panelContacts.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Bottom;
 
             lblContactsHeader.Dock = DockStyle.Top;
             lblContactsHeader.Height = 34;
@@ -130,6 +133,7 @@ namespace ChatClient
             panelChat.AutoScroll = true;
             panelChat.BackColor = Color.White;
             panelChat.Padding = new Padding(8);
+            panelChat.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top | AnchorStyles.Bottom;
 
             // ===== Bảng emoji + ô nhập tin nhắn phía dưới =====
             panelBottom = new Panel();
@@ -141,24 +145,31 @@ namespace ChatClient
 
             panelBottom.Dock = DockStyle.Bottom;
             panelBottom.Height = 92;
+            panelBottom.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
 
             panelEmojis.Location = new Point(10, 6);
             panelEmojis.Size = new Size(790, 40);
+            panelEmojis.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
+            panelEmojis.AutoScroll = true;
 
             txtMessage.Location = new Point(10, 52);
             txtMessage.Size = new Size(480, 27);
+            txtMessage.Anchor = AnchorStyles.Left | AnchorStyles.Bottom;
 
             btnSend.Text = "Gửi";
             btnSend.Location = new Point(500, 50);
             btnSend.Size = new Size(85, 30);
+            btnSend.Anchor = AnchorStyles.Right | AnchorStyles.Bottom;
 
             btnReply.Text = "Reply";
             btnReply.Location = new Point(592, 50);
             btnReply.Size = new Size(100, 30);
+            btnReply.Anchor = AnchorStyles.Right | AnchorStyles.Bottom;
 
             btnForward.Text = "Forward";
             btnForward.Location = new Point(699, 50);
             btnForward.Size = new Size(100, 30);
+            btnForward.Anchor = AnchorStyles.Right | AnchorStyles.Bottom;
 
             panelBottom.Controls.AddRange(new Control[] { panelEmojis, txtMessage, btnSend, btnReply, btnForward });
 
@@ -175,7 +186,6 @@ namespace ChatClient
             this.Controls.Add(panelTop);
         }
 
-        // Vẽ avatar cá nhân hình tròn ở thanh trên
         private void PicAvatar_Paint(object sender, PaintEventArgs e)
         {
             e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;

@@ -8,9 +8,6 @@ using SharedLibrary;
 
 namespace ChatClient
 {
-    /// <summary>
-    /// Dữ liệu của một liên hệ trong danh sách (người dùng trong phòng chat).
-    /// </summary>
     public class ContactItem
     {
         public string Username { get; set; }
@@ -18,25 +15,22 @@ namespace ChatClient
         public bool IsOnline { get; set; }
     }
 
-    /// <summary>
-    /// Hỗ trợ xử lý ảnh đại diện: giải mã Base64 nhận từ Server,
-    /// vẽ avatar hình tròn có viền trạng thái và tạo avatar mặc định theo chữ cái đầu tên.
-    /// </summary>
     public static class AvatarRenderer
     {
         private static readonly Font InitialFont = new Font("Segoe UI", 14f, FontStyle.Bold);
+        private static readonly Dictionary<string, Image> _avatarCache = new Dictionary<string, Image>();
+        private static readonly Dictionary<string, Image> _circularCache = new Dictionary<string, Image>();
 
-        // Giải mã chuỗi Base64 (trong MessagePacket.AvatarBase64) thành Image
         public static Image FromBase64(string base64)
         {
             if (string.IsNullOrEmpty(base64)) return null;
             try
             {
                 byte[] bytes = Convert.FromBase64String(base64);
-                using (MemoryStream ms = new MemoryStream(bytes))
-                {
-                    return new Bitmap(ms);
-                }
+                // FIX #5: Copy bytes to a new array to avoid stream disposal issues
+                byte[] safeBytes = new byte[bytes.Length];
+                Buffer.BlockCopy(bytes, 0, safeBytes, 0, bytes.Length);
+                return new Bitmap(new MemoryStream(safeBytes));
             }
             catch
             {
@@ -44,10 +38,14 @@ namespace ChatClient
             }
         }
 
-        // Avatar mặc định: chữ cái đầu của tên người dùng trên nền màu cố định theo tên
         public static Image DefaultAvatar(string username)
         {
             string initial = string.IsNullOrEmpty(username) ? "?" : username.Substring(0, 1).ToUpper();
+            string cacheKey = "default_" + initial;
+
+            if (_avatarCache.TryGetValue(cacheKey, out Image cached))
+                return cached;
+
             Bitmap bmp = new Bitmap(48, 48);
             using (Graphics g = Graphics.FromImage(bmp))
             {
@@ -59,10 +57,10 @@ namespace ChatClient
                 SizeF size = g.MeasureString(initial, InitialFont);
                 g.DrawString(initial, InitialFont, Brushes.White, (48 - size.Width) / 2f, (48 - size.Height) / 2f);
             }
+            _avatarCache[cacheKey] = bmp;
             return bmp;
         }
 
-        // Chọn màu nền avatar cố định theo tên để mỗi người dùng một màu ổn định
         public static Color PickColor(string username)
         {
             Color[] palette =
@@ -76,39 +74,51 @@ namespace ChatClient
             return palette[hash % palette.Length];
         }
 
-        // Vẽ avatar hình tròn: ảnh thật nếu có, chữ cái đầu nếu không; viền xanh = online
+        // FIX #4: Cache circular avatar to avoid memory leak
+        public static Image GetCircularAvatar(Image avatar, string username, int size, bool isOnline)
+        {
+            string cacheKey = $"{username}_{size}_{isOnline}_{(avatar != null ? avatar.GetHashCode() : 0)}";
+            if (_circularCache.TryGetValue(cacheKey, out Image cached))
+                return cached;
+
+            Bitmap bmp = new Bitmap(size, size);
+            using (Graphics g = Graphics.FromImage(bmp))
+            {
+                DrawCircularInternal(g, avatar, username, new Rectangle(0, 0, size, size), isOnline);
+            }
+            _circularCache[cacheKey] = bmp;
+            return bmp;
+        }
+
         public static void DrawCircular(Graphics g, Image avatar, string username, Rectangle bounds, bool isOnline)
+        {
+            DrawCircularInternal(g, avatar, username, bounds, isOnline);
+        }
+
+        private static void DrawCircularInternal(Graphics g, Image avatar, string username, Rectangle bounds, bool isOnline)
         {
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
-            using (Bitmap circular = new Bitmap(bounds.Width, bounds.Height))
+            using (GraphicsPath path = new GraphicsPath())
             {
-                using (Graphics cg = Graphics.FromImage(circular))
-                {
-                    cg.SmoothingMode = SmoothingMode.AntiAlias;
-                    using (GraphicsPath path = new GraphicsPath())
-                    {
-                        path.AddEllipse(0, 0, bounds.Width - 1, bounds.Height - 1);
-                        cg.SetClip(path);
+                path.AddEllipse(0, 0, bounds.Width - 1, bounds.Height - 1);
+                g.SetClip(path);
 
-                        if (avatar != null)
-                        {
-                            cg.DrawImage(avatar, new Rectangle(0, 0, bounds.Width, bounds.Height));
-                        }
-                        else
-                        {
-                            using (SolidBrush b = new SolidBrush(PickColor(username)))
-                            {
-                                cg.FillRectangle(b, 0, 0, bounds.Width, bounds.Height);
-                            }
-                            string initial = string.IsNullOrEmpty(username) ? "?" : username.Substring(0, 1).ToUpper();
-                            SizeF sz = cg.MeasureString(initial, InitialFont);
-                            cg.DrawString(initial, InitialFont, Brushes.White,
-                                (bounds.Width - sz.Width) / 2f, (bounds.Height - sz.Height) / 2f);
-                        }
-                    }
+                if (avatar != null)
+                {
+                    g.DrawImage(avatar, new Rectangle(0, 0, bounds.Width, bounds.Height));
                 }
-                g.DrawImage(circular, bounds.Location);
+                else
+                {
+                    using (SolidBrush b = new SolidBrush(PickColor(username)))
+                    {
+                        g.FillRectangle(b, 0, 0, bounds.Width, bounds.Height);
+                    }
+                    string initial = string.IsNullOrEmpty(username) ? "?" : username.Substring(0, 1).ToUpper();
+                    SizeF sz = g.MeasureString(initial, InitialFont);
+                    g.DrawString(initial, InitialFont, Brushes.White,
+                        (bounds.Width - sz.Width) / 2f, (bounds.Height - sz.Height) / 2f);
+                }
             }
 
             using (Pen ring = new Pen(isOnline ? Color.FromArgb(46, 160, 67) : Color.Gray, 2.5f))
@@ -118,14 +128,11 @@ namespace ChatClient
         }
     }
 
-    /// <summary>
-    /// Một dòng trong danh sách liên hệ: avatar tròn + tên + trạng thái online/offline.
-    /// Vẽ hoàn toàn bằng GDI+ nên không cần control con.
-    /// </summary>
     public class ContactControl : UserControl
     {
         private const int AvatarSize = 36;
         private ContactItem item;
+        private Image _cachedAvatar;
 
         public ContactControl()
         {
@@ -138,15 +145,19 @@ namespace ChatClient
         public void Bind(ContactItem contact)
         {
             item = contact;
+            // Cache the circular avatar to avoid recreating it every paint
+            _cachedAvatar = AvatarRenderer.GetCircularAvatar(item.Avatar, item.Username, AvatarSize, item.IsOnline);
             Invalidate();
         }
 
+        public ContactItem GetItem() => item;
+
         private void ContactControl_Paint(object sender, PaintEventArgs e)
         {
-            if (item == null) return;
+            if (item == null || _cachedAvatar == null) return;
 
             Rectangle avatarBounds = new Rectangle(8, 5, AvatarSize, AvatarSize);
-            AvatarRenderer.DrawCircular(e.Graphics, item.Avatar, item.Username, avatarBounds, item.IsOnline);
+            e.Graphics.DrawImage(_cachedAvatar, avatarBounds.Location);
 
             using (Font nameFont = new Font("Segoe UI Semibold", 10f))
             {
@@ -162,12 +173,6 @@ namespace ChatClient
         }
     }
 
-    /// <summary>
-    /// Bong bóng tin nhắn trong khu vực chat: avatar người gửi, tên, thời gian,
-    /// dòng trích dẫn (nếu là Reply) và nội dung. Tin của mình nền xanh căn phải,
-    /// tin của người khác nền xám căn trái. Bấm vào bong bóng để chọn tin nhắn
-    /// cho chức năng Reply/Forward.
-    /// </summary>
     public class MessageBubble : Panel
     {
         public MessagePacket Packet { get; }
@@ -207,7 +212,8 @@ namespace ChatClient
 
             int maxBubbleWidth = Math.Min(maxWidth - (IsMine ? AvatarBox + 30 : AvatarBox + 34), 430);
 
-            headerSize = TextRenderer.MeasureText(HeaderText, HeaderFont);
+            headerSize = TextRenderer.MeasureText(HeaderText, HeaderFont,
+                new Size(maxBubbleWidth, int.MaxValue), TextFormatFlags.WordBreak);
             bodySize = TextRenderer.MeasureText(body, BodyFont,
                 new Size(Math.Max(maxBubbleWidth - 2 * BubblePad, 60), int.MaxValue),
                 TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl);
@@ -227,14 +233,12 @@ namespace ChatClient
 
             if (IsMine)
             {
-                // [bong bóng][avatar] căn phải
                 Width = bubbleWidth + AvatarBox + 16;
                 avatarBounds = new Rectangle(Width - AvatarBox - 6, 8, AvatarBox, AvatarBox);
                 bubbleBounds = new Rectangle(4, 2, bubbleWidth, bubbleHeight);
             }
             else
             {
-                // [avatar][bong bóng] căn trái
                 Width = bubbleWidth + AvatarBox + 16;
                 avatarBounds = new Rectangle(6, 8, AvatarBox, AvatarBox);
                 bubbleBounds = new Rectangle(AvatarBox + 10, 2, bubbleWidth, bubbleHeight);
@@ -257,8 +261,8 @@ namespace ChatClient
         {
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
-            // Avatar người gửi luôn hiển thị cạnh bong bóng chat
-            AvatarRenderer.DrawCircular(e.Graphics, senderAvatar, Packet.Sender, avatarBounds, true);
+            Image avatar = senderAvatar ?? AvatarRenderer.DefaultAvatar(Packet.Sender);
+            AvatarRenderer.DrawCircular(e.Graphics, avatar, Packet.Sender, avatarBounds, true);
 
             Color backColor = IsMine ? Color.FromArgb(0, 120, 215) : Color.FromArgb(238, 238, 238);
             Color textColor = IsMine ? Color.White : Color.FromArgb(30, 30, 30);

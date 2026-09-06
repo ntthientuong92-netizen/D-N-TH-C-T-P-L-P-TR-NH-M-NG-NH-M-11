@@ -7,11 +7,6 @@ using SharedLibrary;
 
 namespace ChatClient
 {
-    /// <summary>
-    /// Form chat chính phía Client (phần logic).
-    /// - Thiết kế giao diện nằm ở MainChatForm.Designer.cs
-    /// - ContactControl.cs chứa danh sách liên hệ và bong bóng chat (avatar hiển thị trong khu vực chat)
-    /// </summary>
     public partial class MainChatForm : Form
     {
         private ChatController chatController;
@@ -23,6 +18,7 @@ namespace ChatClient
         private bool formClosing = false;
 
         private readonly Dictionary<string, ContactItem> contacts = new Dictionary<string, ContactItem>();
+        private readonly Dictionary<string, ContactControl> contactControls = new Dictionary<string, ContactControl>();
         private MessageBubble selectedBubble;
         private int nextBubbleY = 8;
 
@@ -32,7 +28,6 @@ namespace ChatClient
 
             txtUsername.Text = "User_" + new Random().Next(100, 999);
 
-            // Bảng chọn emoji nhanh (dữ liệu emoji do EmojiHelper - TV5 - cung cấp)
             foreach (var emoji in EmojiHelper.GetQuickEmojis())
             {
                 Button btnEmoji = new Button { Text = emoji, Size = new Size(38, 32) };
@@ -53,7 +48,6 @@ namespace ChatClient
             panelChat.Resize += PanelChat_Resize;
         }
 
-        // ===== Chọn ảnh đại diện từ file, chuyển sang Base64 để gửi kèm gói tin =====
         private void BtnSelectAvatar_Click(object sender, EventArgs e)
         {
             using (OpenFileDialog ofd = new OpenFileDialog())
@@ -66,7 +60,7 @@ namespace ChatClient
                     using (MemoryStream ms = new MemoryStream(bytes))
                     {
                         myAvatar = new Bitmap(ms);
-                        ResourceCleanup.Track(myAvatar); // TV5: Theo dõi avatar để giải phóng RAM
+                        ResourceCleanup.Track(myAvatar);
                     }
                     picAvatar.Invalidate();
                     UpdateSelfContact();
@@ -94,7 +88,6 @@ namespace ChatClient
                 lblStatus.ForeColor = Color.FromArgb(46, 160, 67);
                 picAvatar.Invalidate();
 
-                // Thêm chính mình vào danh sách liên hệ
                 UpdateSelfContact();
                 AddSystemNotice($"Bạn đã tham gia phòng chat với tên \"{username}\".");
             }
@@ -109,7 +102,7 @@ namespace ChatClient
             string content = txtMessage.Text.Trim();
             if (string.IsNullOrEmpty(content)) return;
 
-            content = EmojiHelper.ParseEmojisFromText(content); // TV5: Chuyển đổi text thành Emoji bằng Regex
+            content = EmojiHelper.ParseEmojisFromText(content);
 
             MessagePacket packet = new MessagePacket
             {
@@ -136,7 +129,7 @@ namespace ChatClient
                 return;
             }
 
-            content = EmojiHelper.ParseEmojisFromText(content); // TV5: Chuyển đổi text thành Emoji bằng Regex
+            content = EmojiHelper.ParseEmojisFromText(content);
 
             MessagePacket packet = new MessagePacket
             {
@@ -174,7 +167,6 @@ namespace ChatClient
             AddBubble(packet, isMine: true);
         }
 
-        // ===== Nhận gói tin từ Server: hiển thị bong bóng chat + cập nhật danh sách liên hệ =====
         private void ChatController_OnMessageReceived(MessagePacket packet)
         {
             if (InvokeRequired)
@@ -183,7 +175,7 @@ namespace ChatClient
                 return;
             }
 
-            if (packet.Sender == username) return; // Server không gửi lại cho mình, chỉ phòng hờ
+            if (packet.Sender == username) return;
 
             if (packet.Type == PacketType.Login)
             {
@@ -192,7 +184,8 @@ namespace ChatClient
             else
             {
                 AddBubble(packet, isMine: false);
-                lastSelectedMessage = packet.Content;
+                // FIX #2: Không tự động update lastSelectedMessage khi nhận tin nhắn
+                // lastSelectedMessage = packet.Content;  ← ĐÃ XÓA
             }
 
             AddOrUpdateContact(packet.Sender, packet.AvatarBase64);
@@ -217,10 +210,14 @@ namespace ChatClient
             lblStatus.ForeColor = Color.Gray;
             picAvatar.Invalidate();
 
-            // Đánh dấu tất cả liên hệ offline
             foreach (ContactItem item in contacts.Values)
             {
                 item.IsOnline = false;
+            }
+            // FIX #1: Cập nhật tất cả ContactControl thay vì chỉ Invalidate
+            foreach (var ctrl in contactControls.Values)
+            {
+                ctrl.Bind(ctrl.GetItem());
             }
             flowContacts.Invalidate(true);
         }
@@ -229,10 +226,9 @@ namespace ChatClient
         {
             formClosing = true;
             chatController.Disconnect();
-            ResourceCleanup.DisposeAll(); // TV5: Giải phóng toàn bộ tài nguyên khi tắt form
+            ResourceCleanup.DisposeAll();
         }
 
-        // ===== Quản lý bong bóng chat trong khu vực chat =====
         private void AddBubble(MessagePacket packet, bool isMine)
         {
             Image avatar = isMine ? myAvatar : GetContactAvatar(packet.Sender);
@@ -248,7 +244,6 @@ namespace ChatClient
             ScrollChatToBottom();
         }
 
-        // Thông báo hệ thống (tham gia phòng...) hiển thị giữa khung chat
         private void AddSystemNotice(string text)
         {
             Label notice = new Label
@@ -281,7 +276,6 @@ namespace ChatClient
             panelChat.AutoScrollPosition = new Point(0, panelChat.DisplayRectangle.Height);
         }
 
-        // Khi thay đổi kích thước cửa sổ: căn lại tin của mình sát phải
         private void PanelChat_Resize(object sender, EventArgs e)
         {
             foreach (Control ctrl in panelChat.Controls)
@@ -298,7 +292,6 @@ namespace ChatClient
             }
         }
 
-        // ===== Quản lý danh sách liên hệ =====
         private void UpdateSelfContact()
         {
             AddOrUpdateContact(username, avatarBase64, myAvatar);
@@ -308,28 +301,36 @@ namespace ChatClient
         {
             if (string.IsNullOrEmpty(name)) return;
 
-            ContactItem item;
-            if (!contacts.TryGetValue(name, out item))
+            if (!contacts.TryGetValue(name, out ContactItem item))
             {
-                item = new ContactItem { Username = name, Avatar = avatarImage, IsOnline = true };
-                if (item.Avatar == null && !string.IsNullOrEmpty(avatarB64))
-                    item.Avatar = AvatarRenderer.FromBase64(avatarB64);
+                item = new ContactItem { Username = name, IsOnline = true };
+                item.Avatar = avatarImage ?? (!string.IsNullOrEmpty(avatarB64) ? AvatarRenderer.FromBase64(avatarB64) : null);
                 if (item.Avatar == null)
                     item.Avatar = AvatarRenderer.DefaultAvatar(name);
 
                 contacts[name] = item;
 
-                ContactControl control = new ContactControl();
-                control.Bind(item);
-                control.Name = "contact_" + name;
-                flowContacts.Controls.Add(control);
+                ContactControl ctrl = new ContactControl();
+                ctrl.Bind(item);
+                ctrl.Name = "contact_" + name;
+                flowContacts.Controls.Add(ctrl);
+                contactControls[name] = ctrl; // FIX #1: Lưu reference để cập nhật sau
             }
             else
             {
                 item.IsOnline = true;
-                Image newAvatar = avatarImage ?? AvatarRenderer.FromBase64(avatarB64);
+                Image newAvatar = avatarImage ?? (!string.IsNullOrEmpty(avatarB64) ? AvatarRenderer.FromBase64(avatarB64) : null);
                 if (newAvatar != null) item.Avatar = newAvatar;
-                flowContacts.Invalidate(true);
+
+                // FIX #1: Gọi Bind để cập nhật UI thay vì chỉ Invalidate
+                if (contactControls.TryGetValue(name, out ContactControl ctrl))
+                {
+                    ctrl.Bind(item);
+                }
+                else
+                {
+                    flowContacts.Invalidate(true);
+                }
             }
         }
 
