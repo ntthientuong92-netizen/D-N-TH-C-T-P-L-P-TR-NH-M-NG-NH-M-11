@@ -27,7 +27,7 @@ namespace ChatClient
             try
             {
                 byte[] bytes = Convert.FromBase64String(base64);
-                // FIX #5: Copy bytes to a new array to avoid stream disposal issues
+                // Copy bytes ra mảng mới để tránh lỗi stream bị dispose (FIX cũ giữ nguyên)
                 byte[] safeBytes = new byte[bytes.Length];
                 Buffer.BlockCopy(bytes, 0, safeBytes, 0, bytes.Length);
                 return new Bitmap(new MemoryStream(safeBytes));
@@ -65,8 +65,8 @@ namespace ChatClient
         {
             Color[] palette =
             {
-                Color.FromArgb(70, 130, 180), Color.FromArgb(46, 139, 87), Color.FromArgb(205, 92, 92),
-                Color.FromArgb(147, 112, 219), Color.FromArgb(210, 140, 60)
+                Color.FromArgb(43, 108, 233), Color.FromArgb(22, 149, 122), Color.FromArgb(214, 92, 74),
+                Color.FromArgb(126, 96, 211), Color.FromArgb(206, 132, 46), Color.FromArgb(66, 139, 197)
             };
             int hash = 0;
             foreach (char c in username ?? "") unchecked { hash += c; }
@@ -74,17 +74,23 @@ namespace ChatClient
             return palette[hash % palette.Length];
         }
 
-        // FIX #4: Cache circular avatar to avoid memory leak
+        // Cache avatar tròn để tránh tạo Bitmap mỗi lần vẽ (FIX cũ giữ nguyên)
         public static Image GetCircularAvatar(Image avatar, string username, int size, bool isOnline)
         {
-            string cacheKey = $"{username}_{size}_{isOnline}_{(avatar != null ? avatar.GetHashCode() : 0)}";
+            return GetCircularAvatar(avatar, username, size,
+                isOnline ? UiTheme.Online : UiTheme.Offline);
+        }
+
+        public static Image GetCircularAvatar(Image avatar, string username, int size, Color? ringColor)
+        {
+            string cacheKey = $"{username}_{size}_{ringColor?.ToArgb() ?? -1}_{(avatar != null ? avatar.GetHashCode() : 0)}";
             if (_circularCache.TryGetValue(cacheKey, out Image cached))
                 return cached;
 
             Bitmap bmp = new Bitmap(size, size);
             using (Graphics g = Graphics.FromImage(bmp))
             {
-                DrawCircularInternal(g, avatar, username, new Rectangle(0, 0, size, size), isOnline);
+                DrawCircularInternal(g, avatar, username, new Rectangle(0, 0, size, size), ringColor);
             }
             _circularCache[cacheKey] = bmp;
             return bmp;
@@ -92,10 +98,15 @@ namespace ChatClient
 
         public static void DrawCircular(Graphics g, Image avatar, string username, Rectangle bounds, bool isOnline)
         {
-            DrawCircularInternal(g, avatar, username, bounds, isOnline);
+            DrawCircularInternal(g, avatar, username, bounds, isOnline ? UiTheme.Online : UiTheme.Offline);
         }
 
-        private static void DrawCircularInternal(Graphics g, Image avatar, string username, Rectangle bounds, bool isOnline)
+        public static void DrawCircular(Graphics g, Image avatar, string username, Rectangle bounds, Color ringColor)
+        {
+            DrawCircularInternal(g, avatar, username, bounds, ringColor);
+        }
+
+        private static void DrawCircularInternal(Graphics g, Image avatar, string username, Rectangle bounds, Color? ringColor)
         {
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
@@ -120,33 +131,42 @@ namespace ChatClient
                         (bounds.Width - sz.Width) / 2f, (bounds.Height - sz.Height) / 2f);
                 }
             }
+            g.ResetClip();
 
-            using (Pen ring = new Pen(isOnline ? Color.FromArgb(46, 160, 67) : Color.Gray, 2.5f))
+            if (ringColor.HasValue)
             {
-                g.DrawEllipse(ring, bounds.X, bounds.Y, bounds.Width - 1, bounds.Height - 1);
+                using (Pen ring = new Pen(ringColor.Value, 2.5f))
+                {
+                    g.DrawEllipse(ring, bounds.X, bounds.Y, bounds.Width - 1, bounds.Height - 1);
+                }
             }
         }
     }
 
+    /// <summary>Một dòng trong danh sách liên hệ: avatar tròn + chấm trạng thái + tên.</summary>
     public class ContactControl : UserControl
     {
         private const int AvatarSize = 36;
         private ContactItem item;
         private Image _cachedAvatar;
+        private bool hovered;
 
         public ContactControl()
         {
-            Width = 200;
-            Height = 46;
+            Width = 224;
+            Height = 52;
             DoubleBuffered = true;
+            Cursor = Cursors.Hand;
             Paint += ContactControl_Paint;
+            MouseEnter += (_, _) => { hovered = true; Invalidate(); };
+            MouseLeave += (_, _) => { hovered = false; Invalidate(); };
         }
 
         public void Bind(ContactItem contact)
         {
             item = contact;
-            // Cache the circular avatar to avoid recreating it every paint
-            _cachedAvatar = AvatarRenderer.GetCircularAvatar(item.Avatar, item.Username, AvatarSize, item.IsOnline);
+            // Avatar tròn không viền (chấm online vẽ riêng để cập nhật trạng thái linh hoạt)
+            _cachedAvatar = AvatarRenderer.GetCircularAvatar(item.Avatar, item.Username, AvatarSize, (Color?)null);
             Invalidate();
         }
 
@@ -154,25 +174,51 @@ namespace ChatClient
 
         private void ContactControl_Paint(object sender, PaintEventArgs e)
         {
-            if (item == null || _cachedAvatar == null) return;
+            if (item == null) return;
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
-            Rectangle avatarBounds = new Rectangle(8, 5, AvatarSize, AvatarSize);
-            e.Graphics.DrawImage(_cachedAvatar, avatarBounds.Location);
-
-            using (Font nameFont = new Font("Segoe UI Semibold", 10f))
+            if (hovered)
             {
-                e.Graphics.DrawString(item.Username, nameFont, Brushes.Black, avatarBounds.Right + 8, 5);
+                using (GraphicsPath p = UiTheme.RoundedPath(new Rectangle(0, 0, Width - 1, Height - 1), 10))
+                using (SolidBrush b = new SolidBrush(UiTheme.HoverBg))
+                {
+                    e.Graphics.FillPath(b, p);
+                }
             }
 
-            string status = item.IsOnline ? "● Online" : "○ Offline";
-            using (Font statusFont = new Font("Segoe UI", 8.5f))
-            using (SolidBrush brush = new SolidBrush(item.IsOnline ? Color.FromArgb(46, 160, 67) : Color.Gray))
+            // Avatar (nếu chưa kịp cache thì vẽ trực tiếp)
+            Rectangle avatarBounds = new Rectangle(10, 8, AvatarSize, AvatarSize);
+            Image avatar = _cachedAvatar ?? AvatarRenderer.DefaultAvatar(item.Username);
+            e.Graphics.DrawImage(avatar, avatarBounds.Location);
+
+            // Chấm trạng thái online/offline ở góc avatar
+            int dotR = 5;
+            Point dotCenter = new Point(avatarBounds.Right - dotR - 1, avatarBounds.Bottom - dotR - 1);
+            using (SolidBrush ring = new SolidBrush(UiTheme.SidebarBg))
+                e.Graphics.FillEllipse(ring, dotCenter.X - dotR - 1.5f, dotCenter.Y - dotR - 1.5f, dotR * 2 + 3, dotR * 2 + 3);
+            using (SolidBrush dot = new SolidBrush(item.IsOnline ? UiTheme.Online : UiTheme.Offline))
+                e.Graphics.FillEllipse(dot, dotCenter.X - dotR, dotCenter.Y - dotR, dotR * 2, dotR * 2);
+
+            // Tên + trạng thái
+            int textX = avatarBounds.Right + 10;
+            using (Font nameFont = UiTheme.Font(9.75f, FontStyle.Bold))
             {
-                e.Graphics.DrawString(status, statusFont, brush, avatarBounds.Right + 8, 26);
+                TextRenderer.DrawText(e.Graphics, item.Username, nameFont,
+                    new Rectangle(textX, 9, Width - textX - 8, 18), UiTheme.TextPrimary,
+                    TextFormatFlags.Default | TextFormatFlags.EndEllipsis);
+            }
+            using (Font statusFont = UiTheme.Font(8.25f))
+            {
+                TextRenderer.DrawText(e.Graphics,
+                    item.IsOnline ? "Đang hoạt động" : "Ngoại tuyến",
+                    statusFont, new Rectangle(textX, 30, Width - textX - 8, 14),
+                    item.IsOnline ? UiTheme.Online : UiTheme.TextSecondary,
+                    TextFormatFlags.Default | TextFormatFlags.EndEllipsis);
             }
         }
     }
 
+    /// <summary>Bong bóng tin nhắn: bo góc lệch tạo "đuôi", khối trích dẫn reply, header tên + giờ.</summary>
     public class MessageBubble : Panel
     {
         public MessagePacket Packet { get; }
@@ -180,17 +226,22 @@ namespace ChatClient
 
         private readonly Image senderAvatar;
         private bool selected;
+        private readonly Size nameSize;
+        private readonly Size timeSize;
         private readonly Size bodySize;
-        private readonly Size headerSize;
-        private readonly int quoteHeight;
+        private readonly Size quoteSize;
+        private readonly int quoteBlockHeight;
         private readonly Rectangle bubbleBounds;
         private readonly Rectangle avatarBounds;
+        private readonly string nameText;
+        private readonly string timeText;
 
         private const int AvatarBox = 34;
-        private const int BubblePad = 10;
-        private static readonly Font HeaderFont = new Font("Segoe UI Semibold", 9f);
-        private static readonly Font BodyFont = new Font("Segoe UI", 10f);
-        private static readonly Font QuoteFont = new Font("Segoe UI", 8.5f, FontStyle.Italic);
+        private const int BubblePad = 12;
+        private static readonly Font NameFont = UiTheme.Font(9f, FontStyle.Bold);
+        private static readonly Font TimeFont = UiTheme.Font(8f);
+        private static readonly Font BodyFont = UiTheme.Font(9.75f);
+        private static readonly Font QuoteFont = UiTheme.Font(8.5f, FontStyle.Italic);
 
         [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool Selected
@@ -208,53 +259,60 @@ namespace ChatClient
             DoubleBuffered = true;
 
             string body = packet.Content ?? "";
-            string quote = string.IsNullOrEmpty(packet.ReplyToContent) ? "" : "↩ " + packet.ReplyToContent;
+            bool hasQuote = !string.IsNullOrEmpty(packet.ReplyToContent);
 
-            int maxBubbleWidth = Math.Min(maxWidth - (IsMine ? AvatarBox + 30 : AvatarBox + 34), 430);
+            int maxBubbleWidth = Math.Min(maxWidth - (AvatarBox + 26), 460);
+            if (maxBubbleWidth < 140) maxBubbleWidth = 140;
 
-            headerSize = TextRenderer.MeasureText(HeaderText, HeaderFont,
-                new Size(maxBubbleWidth, int.MaxValue), TextFormatFlags.WordBreak);
+            nameText = Packet.Type == PacketType.Forward
+                ? $"{Packet.Sender} · Chuyển tiếp"
+                : Packet.Sender;
+            timeText = packet.Timestamp.ToString("HH:mm");
+
+            nameSize = TextRenderer.MeasureText(nameText, NameFont);
+            timeSize = TextRenderer.MeasureText(timeText, TimeFont);
             bodySize = TextRenderer.MeasureText(body, BodyFont,
-                new Size(Math.Max(maxBubbleWidth - 2 * BubblePad, 60), int.MaxValue),
+                new Size(maxBubbleWidth - 2 * BubblePad, int.MaxValue),
                 TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl);
 
-            quoteHeight = 0;
-            if (quote.Length > 0)
+            quoteBlockHeight = 0;
+            if (hasQuote)
             {
-                Size q = TextRenderer.MeasureText(quote, QuoteFont,
-                    new Size(Math.Max(maxBubbleWidth - 2 * BubblePad, 60), int.MaxValue),
+                string quote = "↩  " + packet.ReplyToContent;
+                quoteSize = TextRenderer.MeasureText(quote, QuoteFont,
+                    new Size(Math.Max(maxBubbleWidth - 2 * BubblePad - 16, 60), int.MaxValue),
                     TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl);
-                quoteHeight = q.Height + 6;
-            }
-
-            int contentWidth = Math.Max(headerSize.Width, Math.Max(bodySize.Width, quote.Length > 0 ? maxBubbleWidth - 2 * BubblePad : 0));
-            int bubbleWidth = Math.Min(contentWidth + 2 * BubblePad, maxBubbleWidth);
-            int bubbleHeight = 8 + headerSize.Height + quoteHeight + bodySize.Height + 10;
-
-            if (IsMine)
-            {
-                Width = bubbleWidth + AvatarBox + 16;
-                avatarBounds = new Rectangle(Width - AvatarBox - 6, 8, AvatarBox, AvatarBox);
-                bubbleBounds = new Rectangle(4, 2, bubbleWidth, bubbleHeight);
+                quoteBlockHeight = quoteSize.Height + 10;
             }
             else
             {
-                Width = bubbleWidth + AvatarBox + 16;
-                avatarBounds = new Rectangle(6, 8, AvatarBox, AvatarBox);
-                bubbleBounds = new Rectangle(AvatarBox + 10, 2, bubbleWidth, bubbleHeight);
+                quoteSize = Size.Empty;
             }
 
-            Height = bubbleHeight + 8;
-            Paint += MessageBubble_Paint;
-        }
+            int headerWidth = nameSize.Width + 8 + timeSize.Width;
+            int contentWidth = Math.Max(headerWidth,
+                Math.Max(bodySize.Width, hasQuote ? quoteSize.Width + 16 : 0));
+            int bubbleWidth = Math.Min(contentWidth + 2 * BubblePad, maxBubbleWidth);
+            int bubbleHeight = 8 + nameSize.Height
+                             + (hasQuote ? 4 + quoteBlockHeight : 0)
+                             + 4 + bodySize.Height + 11;
 
-        private string HeaderText
-        {
-            get
+            if (IsMine)
             {
-                string tag = Packet.Type == PacketType.Forward ? " (Chuyển tiếp)" : "";
-                return $"{Packet.Sender}{tag}  •  {Packet.Timestamp:HH:mm}";
+                Width = bubbleWidth + AvatarBox + 14;
+                Height = bubbleHeight + 6;
+                bubbleBounds = new Rectangle(2, 3, bubbleWidth, bubbleHeight);
+                avatarBounds = new Rectangle(Width - AvatarBox - 2, 6, AvatarBox, AvatarBox);
             }
+            else
+            {
+                Width = bubbleWidth + AvatarBox + 14;
+                Height = bubbleHeight + 6;
+                bubbleBounds = new Rectangle(AvatarBox + 8, 3, bubbleWidth, bubbleHeight);
+                avatarBounds = new Rectangle(4, 6, AvatarBox, AvatarBox);
+            }
+
+            Paint += MessageBubble_Paint;
         }
 
         private void MessageBubble_Paint(object sender, PaintEventArgs e)
@@ -262,55 +320,72 @@ namespace ChatClient
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
             Image avatar = senderAvatar ?? AvatarRenderer.DefaultAvatar(Packet.Sender);
-            AvatarRenderer.DrawCircular(e.Graphics, avatar, Packet.Sender, avatarBounds, true);
+            AvatarRenderer.DrawCircular(e.Graphics, avatar, Packet.Sender, avatarBounds,
+                Color.FromArgb(224, 230, 238));
 
-            Color backColor = IsMine ? Color.FromArgb(0, 120, 215) : Color.FromArgb(238, 238, 238);
-            Color textColor = IsMine ? Color.White : Color.FromArgb(30, 30, 30);
-            Color subColor = IsMine ? Color.FromArgb(200, 224, 250) : Color.Gray;
+            // Đuôi bubble: góc gần avatar bo nhỏ hơn
+            GraphicsPath bubblePath = IsMine
+                ? UiTheme.AsymmetricPath(bubbleBounds, 14, 14, 4, 14)
+                : UiTheme.AsymmetricPath(bubbleBounds, 14, 14, 14, 4);
 
-            using (GraphicsPath path = RoundedRect(bubbleBounds, 10))
-            using (SolidBrush back = new SolidBrush(backColor))
+            using (SolidBrush back = new SolidBrush(IsMine ? UiTheme.BubbleMine : UiTheme.BubbleOther))
             {
-                e.Graphics.FillPath(back, path);
+                e.Graphics.FillPath(back, bubblePath);
             }
-
+            if (!IsMine)
+            {
+                using (Pen border = new Pen(UiTheme.BubbleOtherBorder, 1f))
+                {
+                    e.Graphics.DrawPath(border, bubblePath);
+                }
+            }
             if (selected)
             {
-                using (Pen pen = new Pen(Color.FromArgb(255, 140, 0), 2f))
+                using (Pen pen = new Pen(UiTheme.Warning, 2f))
                 {
-                    e.Graphics.DrawPath(pen, RoundedRect(bubbleBounds, 10));
+                    e.Graphics.DrawPath(pen, bubblePath);
                 }
             }
 
-            Point textOrigin = new Point(bubbleBounds.X + BubblePad, bubbleBounds.Y + 5);
-            TextRenderer.DrawText(e.Graphics, HeaderText, HeaderFont,
-                new Rectangle(textOrigin, headerSize), subColor, TextFormatFlags.Default);
+            Color nameColor = IsMine ? Color.FromArgb(219, 234, 255) : AvatarRenderer.PickColor(Packet.Sender);
+            Color timeColor = IsMine ? Color.FromArgb(178, 205, 248) : UiTheme.TextSecondary;
+            Color bodyColor = IsMine ? Color.White : UiTheme.TextPrimary;
 
-            int y = textOrigin.Y + headerSize.Height;
-            if (quoteHeight > 0)
+            int textX = bubbleBounds.X + BubblePad;
+            int y = bubbleBounds.Y + 8;
+
+            // Header: tên + giờ
+            TextRenderer.DrawText(e.Graphics, nameText, NameFont,
+                new Rectangle(textX, y, nameSize.Width + 4, nameSize.Height), nameColor,
+                TextFormatFlags.Default | TextFormatFlags.EndEllipsis);
+            TextRenderer.DrawText(e.Graphics, timeText, TimeFont,
+                new Rectangle(textX + nameSize.Width + 8, y + 1, timeSize.Width + 4, timeSize.Height), timeColor,
+                TextFormatFlags.Default);
+            y += nameSize.Height + 4;
+
+            // Khối trích dẫn reply
+            if (quoteBlockHeight > 0)
             {
-                string quote = "↩ " + Packet.ReplyToContent;
-                TextRenderer.DrawText(e.Graphics, quote, QuoteFont,
-                    new Rectangle(new Point(textOrigin.X, y), new Size(bubbleBounds.Width - 2 * BubblePad, quoteHeight)),
-                    subColor, TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl);
-                y += quoteHeight;
+                Rectangle quoteRect = new Rectangle(textX, y, bubbleBounds.Width - 2 * BubblePad, quoteBlockHeight);
+                using (GraphicsPath qPath = UiTheme.RoundedPath(quoteRect, 6))
+                using (SolidBrush qBg = new SolidBrush(IsMine ? UiTheme.QuoteMineBg : UiTheme.QuoteOtherBg))
+                {
+                    e.Graphics.FillPath(qBg, qPath);
+                }
+                using (SolidBrush bar = new SolidBrush(IsMine ? Color.FromArgb(140, 180, 255) : UiTheme.Accent))
+                {
+                    e.Graphics.FillRectangle(bar, quoteRect.X + 4, quoteRect.Y + 3, 3, quoteRect.Height - 6);
+                }
+                TextRenderer.DrawText(e.Graphics, "↩  " + Packet.ReplyToContent, QuoteFont,
+                    new Rectangle(quoteRect.X + 13, quoteRect.Y + 5, quoteRect.Width - 17, quoteRect.Height - 8),
+                    IsMine ? Color.FromArgb(206, 226, 255) : UiTheme.TextSecondary,
+                    TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.EndEllipsis);
+                y += quoteBlockHeight + 4;
             }
 
             TextRenderer.DrawText(e.Graphics, Packet.Content ?? "", BodyFont,
-                new Rectangle(new Point(textOrigin.X, y), new Size(bubbleBounds.Width - 2 * BubblePad, bodySize.Height + 4)),
-                textColor, TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl);
-        }
-
-        private static GraphicsPath RoundedRect(Rectangle bounds, int radius)
-        {
-            int d = radius * 2;
-            GraphicsPath path = new GraphicsPath();
-            path.AddArc(bounds.X, bounds.Y, d, d, 180, 90);
-            path.AddArc(bounds.Right - d, bounds.Y, d, d, 270, 90);
-            path.AddArc(bounds.Right - d, bounds.Bottom - d, d, d, 0, 90);
-            path.AddArc(bounds.X, bounds.Bottom - d, d, d, 90, 90);
-            path.CloseFigure();
-            return path;
+                new Rectangle(textX, y, bubbleBounds.Width - 2 * BubblePad, bodySize.Height + 4), bodyColor,
+                TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl);
         }
     }
 }

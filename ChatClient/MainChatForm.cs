@@ -20,7 +20,7 @@ namespace ChatClient
         private readonly Dictionary<string, ContactItem> contacts = new Dictionary<string, ContactItem>();
         private readonly Dictionary<string, ContactControl> contactControls = new Dictionary<string, ContactControl>();
         private MessageBubble selectedBubble;
-        private int nextBubbleY = 8;
+        private int nextBubbleY = 10;
 
         public MainChatForm()
         {
@@ -28,11 +28,21 @@ namespace ChatClient
 
             txtUsername.Text = "User_" + new Random().Next(100, 999);
 
-            foreach (var emoji in EmojiHelper.GetQuickEmojis())
+            using (Font emojiFont = new Font("Segoe UI Emoji", 12f))
             {
-                Button btnEmoji = new Button { Text = emoji, Size = new Size(38, 32) };
-                btnEmoji.Click += (s, e) => { txtMessage.Text += emoji; txtMessage.Focus(); };
-                panelEmojis.Controls.Add(btnEmoji);
+                foreach (var emoji in EmojiHelper.GetQuickEmojis())
+                {
+                    ModernButton btnEmoji = new ModernButton
+                    {
+                        Text = emoji,
+                        Size = new Size(42, 32),
+                        Primary = false,
+                        CornerRadius = 8,
+                        Font = emojiFont
+                    };
+                    btnEmoji.Click += (s, e) => { txtMessage.Text += emoji; txtMessage.Focus(); };
+                    panelEmojis.Controls.Add(btnEmoji);
+                }
             }
 
             chatController = new ChatController();
@@ -44,8 +54,24 @@ namespace ChatClient
             btnSend.Click += BtnSend_Click;
             btnReply.Click += BtnReply_Click;
             btnForward.Click += BtnForward_Click;
+            txtMessage.KeyDown += TxtMessage_KeyDown;
             this.FormClosing += MainChatForm_FormClosing;
             panelChat.Resize += PanelChat_Resize;
+            this.Shown += (s, e) =>
+            {
+                if (lblChatHint.Parent != null)
+                    lblChatHint.Location = new Point(
+                        Math.Max((panelChat.ClientSize.Width - lblChatHint.Width) / 2, 0), 60);
+            };
+        }
+
+        private void TxtMessage_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                e.SuppressKeyPress = true;
+                BtnSend_Click(sender, EventArgs.Empty);
+            }
         }
 
         private void BtnSelectAvatar_Click(object sender, EventArgs e)
@@ -84,8 +110,8 @@ namespace ChatClient
                 btnConnect.Enabled = false;
                 txtUsername.Enabled = false;
                 txtServerIp.Enabled = false;
-                lblStatus.Text = "● Đã kết nối";
-                lblStatus.ForeColor = Color.FromArgb(46, 160, 67);
+                lblStatus.Text = "●  Đã kết nối";
+                lblStatus.ForeColor = UiTheme.Online;
                 picAvatar.Invalidate();
 
                 UpdateSelfContact();
@@ -150,7 +176,7 @@ namespace ChatClient
         {
             if (string.IsNullOrEmpty(lastSelectedMessage))
             {
-                MessageBox.Show("Chưa có nội dung tin nhắn nào để forward!");
+                MessageBox.Show("Chưa có nội dung tin nhắn nào để chuyển tiếp!");
                 return;
             }
 
@@ -184,8 +210,7 @@ namespace ChatClient
             else
             {
                 AddBubble(packet, isMine: false);
-                // FIX #2: Không tự động update lastSelectedMessage khi nhận tin nhắn
-                // lastSelectedMessage = packet.Content;  ← ĐÃ XÓA
+                // FIX #2 (giữ nguyên): không tự update lastSelectedMessage khi nhận tin nhắn
             }
 
             AddOrUpdateContact(packet.Sender, packet.AvatarBase64);
@@ -206,15 +231,15 @@ namespace ChatClient
             btnConnect.Enabled = true;
             txtUsername.Enabled = true;
             txtServerIp.Enabled = true;
-            lblStatus.Text = "◌ Chưa kết nối";
-            lblStatus.ForeColor = Color.Gray;
+            lblStatus.Text = "◌  Chưa kết nối";
+            lblStatus.ForeColor = UiTheme.TextSecondary;
             picAvatar.Invalidate();
 
             foreach (ContactItem item in contacts.Values)
             {
                 item.IsOnline = false;
             }
-            // FIX #1: Cập nhật tất cả ContactControl thay vì chỉ Invalidate
+            // FIX #1 (giữ nguyên): Bind lại tất cả ContactControl thay vì chỉ Invalidate
             foreach (var ctrl in contactControls.Values)
             {
                 ctrl.Bind(ctrl.GetItem());
@@ -229,35 +254,47 @@ namespace ChatClient
             ResourceCleanup.DisposeAll();
         }
 
+        private void RemoveChatHint()
+        {
+            if (lblChatHint != null && lblChatHint.Parent != null)
+            {
+                panelChat.Controls.Remove(lblChatHint);
+                lblChatHint.Dispose();
+            }
+        }
+
         private void AddBubble(MessagePacket packet, bool isMine)
         {
+            RemoveChatHint();
             Image avatar = isMine ? myAvatar : GetContactAvatar(packet.Sender);
-            MessageBubble bubble = new MessageBubble(packet, isMine, panelChat.ClientSize.Width - 24, avatar);
+            MessageBubble bubble = new MessageBubble(packet, isMine, panelChat.ClientSize.Width - 28, avatar);
 
             bubble.Location = new Point(
-                isMine ? panelChat.ClientSize.Width - bubble.Width - 30 : 10,
+                isMine ? panelChat.ClientSize.Width - bubble.Width - 16 : 14,
                 nextBubbleY);
             bubble.Click += (s, e) => SelectBubble(bubble);
 
-            nextBubbleY += bubble.Height + 8;
+            nextBubbleY += bubble.Height + 10;
             panelChat.Controls.Add(bubble);
             ScrollChatToBottom();
         }
 
         private void AddSystemNotice(string text)
         {
+            RemoveChatHint();
             Label notice = new Label
             {
                 Text = text,
                 AutoSize = false,
-                Height = 22,
-                Width = panelChat.ClientSize.Width - 40,
+                Height = 24,
+                Width = panelChat.ClientSize.Width - 60,
                 TextAlign = ContentAlignment.MiddleCenter,
-                ForeColor = Color.Gray,
-                Font = new Font("Segoe UI", 8.5f, FontStyle.Italic),
-                Location = new Point(20, nextBubbleY)
+                ForeColor = UiTheme.TextSecondary,
+                BackColor = UiTheme.ChatBg,
+                Font = UiTheme.Font(8.5f, FontStyle.Italic),
+                Location = new Point(30, nextBubbleY)
             };
-            nextBubbleY += 28;
+            nextBubbleY += 30;
             panelChat.Controls.Add(notice);
             ScrollChatToBottom();
         }
@@ -280,14 +317,13 @@ namespace ChatClient
         {
             foreach (Control ctrl in panelChat.Controls)
             {
-                MessageBubble bubble = ctrl as MessageBubble;
-                if (bubble != null && bubble.IsMine)
+                if (ctrl is MessageBubble bubble && bubble.IsMine)
                 {
-                    bubble.Left = panelChat.ClientSize.Width - bubble.Width - 30;
+                    bubble.Left = panelChat.ClientSize.Width - bubble.Width - 16;
                 }
-                else if (ctrl is Label)
+                else if (ctrl is Label && ctrl != lblChatHint)
                 {
-                    ctrl.Width = panelChat.ClientSize.Width - 40;
+                    ctrl.Width = panelChat.ClientSize.Width - 60;
                 }
             }
         }
@@ -314,7 +350,7 @@ namespace ChatClient
                 ctrl.Bind(item);
                 ctrl.Name = "contact_" + name;
                 flowContacts.Controls.Add(ctrl);
-                contactControls[name] = ctrl; // FIX #1: Lưu reference để cập nhật sau
+                contactControls[name] = ctrl; // FIX #1 (giữ nguyên): lưu reference để cập nhật sau
             }
             else
             {
@@ -322,7 +358,7 @@ namespace ChatClient
                 Image newAvatar = avatarImage ?? (!string.IsNullOrEmpty(avatarB64) ? AvatarRenderer.FromBase64(avatarB64) : null);
                 if (newAvatar != null) item.Avatar = newAvatar;
 
-                // FIX #1: Gọi Bind để cập nhật UI thay vì chỉ Invalidate
+                // FIX #1 (giữ nguyên): gọi Bind để cập nhật UI
                 if (contactControls.TryGetValue(name, out ContactControl ctrl))
                 {
                     ctrl.Bind(item);
@@ -332,6 +368,8 @@ namespace ChatClient
                     flowContacts.Invalidate(true);
                 }
             }
+
+            lblContactsHeader.Text = $"  THÀNH VIÊN ({contacts.Count})";
         }
 
         private Image GetContactAvatar(string name)
