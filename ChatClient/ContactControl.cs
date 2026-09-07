@@ -112,23 +112,25 @@ namespace ChatClient
 
             using (GraphicsPath path = new GraphicsPath())
             {
-                path.AddEllipse(0, 0, bounds.Width - 1, bounds.Height - 1);
+                // Clip và vẽ đúng theo vị trí thật của vùng avatar (bounds), không phải gốc (0,0)
+                path.AddEllipse(bounds.X, bounds.Y, bounds.Width - 1, bounds.Height - 1);
                 g.SetClip(path);
 
                 if (avatar != null)
                 {
-                    g.DrawImage(avatar, new Rectangle(0, 0, bounds.Width, bounds.Height));
+                    g.DrawImage(avatar, bounds);
                 }
                 else
                 {
                     using (SolidBrush b = new SolidBrush(PickColor(username)))
                     {
-                        g.FillRectangle(b, 0, 0, bounds.Width, bounds.Height);
+                        g.FillRectangle(b, bounds);
                     }
                     string initial = string.IsNullOrEmpty(username) ? "?" : username.Substring(0, 1).ToUpper();
                     SizeF sz = g.MeasureString(initial, InitialFont);
                     g.DrawString(initial, InitialFont, Brushes.White,
-                        (bounds.Width - sz.Width) / 2f, (bounds.Height - sz.Height) / 2f);
+                        bounds.X + (bounds.Width - sz.Width) / 2f,
+                        bounds.Y + (bounds.Height - sz.Height) / 2f);
                 }
             }
             g.ResetClip();
