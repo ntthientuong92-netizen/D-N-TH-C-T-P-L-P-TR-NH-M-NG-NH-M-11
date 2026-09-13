@@ -237,6 +237,7 @@ namespace ChatClient
         private readonly Rectangle avatarBounds;
         private readonly string nameText;
         private readonly string timeText;
+        private readonly string quoteText;
 
         private const int AvatarBox = 34;
         private const int BubblePad = 12;
@@ -266,9 +267,29 @@ namespace ChatClient
             int maxBubbleWidth = Math.Min(maxWidth - (AvatarBox + 26), 460);
             if (maxBubbleWidth < 140) maxBubbleWidth = 140;
 
-            nameText = Packet.Type == PacketType.Forward
-                ? $"{Packet.Sender} · Chuyển tiếp"
-                : Packet.Sender;
+            // Tiêu đề bong bóng:
+            //  - Forward  : ghi rõ "Chuyển tiếp từ <người gửi gốc>"
+            //  - Tin riêng: ghi rõ người nhận (mình gửi) / "tin riêng" (mình nhận)
+            bool isPrivate = !string.IsNullOrEmpty(Packet.Receiver)
+                             && !Packet.Receiver.Equals("All", StringComparison.OrdinalIgnoreCase)
+                             && !Packet.Receiver.Equals("Server", StringComparison.OrdinalIgnoreCase);
+
+            if (Packet.Type == PacketType.Forward)
+            {
+                nameText = string.IsNullOrEmpty(Packet.OriginalSender)
+                    ? $"{Packet.Sender} · Chuyển tiếp"
+                    : $"{Packet.Sender} · Chuyển tiếp từ {Packet.OriginalSender}";
+            }
+            else
+            {
+                nameText = Packet.Sender;
+            }
+
+            if (isPrivate)
+            {
+                nameText += IsMine ? $"  →  {Packet.Receiver}" : "  ·  tin riêng";
+            }
+
             timeText = packet.Timestamp.ToString("HH:mm");
 
             nameSize = TextRenderer.MeasureText(nameText, NameFont);
@@ -280,14 +301,19 @@ namespace ChatClient
             quoteBlockHeight = 0;
             if (hasQuote)
             {
-                string quote = "↩  " + packet.ReplyToContent;
-                quoteSize = TextRenderer.MeasureText(quote, QuoteFont,
+                // Hiển thị rõ đang trả lời ai: "↩  TênNgườiGửi: nội dung tin gốc"
+                quoteText = string.IsNullOrEmpty(packet.ReplyToSender)
+                    ? "↩  " + packet.ReplyToContent
+                    : $"↩  {packet.ReplyToSender}: {packet.ReplyToContent}";
+
+                quoteSize = TextRenderer.MeasureText(quoteText, QuoteFont,
                     new Size(Math.Max(maxBubbleWidth - 2 * BubblePad - 16, 60), int.MaxValue),
                     TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl);
                 quoteBlockHeight = quoteSize.Height + 10;
             }
             else
             {
+                quoteText = "";
                 quoteSize = Size.Empty;
             }
 
@@ -378,7 +404,7 @@ namespace ChatClient
                 {
                     e.Graphics.FillRectangle(bar, quoteRect.X + 4, quoteRect.Y + 3, 3, quoteRect.Height - 6);
                 }
-                TextRenderer.DrawText(e.Graphics, "↩  " + Packet.ReplyToContent, QuoteFont,
+                TextRenderer.DrawText(e.Graphics, quoteText, QuoteFont,
                     new Rectangle(quoteRect.X + 13, quoteRect.Y + 5, quoteRect.Width - 17, quoteRect.Height - 8),
                     IsMine ? Color.FromArgb(206, 226, 255) : UiTheme.TextSecondary,
                     TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl | TextFormatFlags.EndEllipsis);

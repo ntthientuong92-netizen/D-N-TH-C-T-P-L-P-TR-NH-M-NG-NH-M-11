@@ -37,6 +37,8 @@ namespace ChatClient
         private ModernButton btnSend;
         private ModernButton btnReply;
         private ModernButton btnForward;
+        private Label lblReplyPreview;
+        private ModernButton btnCancelReply;
 
         protected override void Dispose(bool disposing)
         {
@@ -71,11 +73,16 @@ namespace ChatClient
             panelTop.Height = 68;
             panelTop.BackColor = UiTheme.WindowBg;
 
+            // QUAN TRỌNG: phải đặt Width bằng đúng bề rộng client cuối cùng TRƯỚC khi thêm các
+            // control dùng Anchor Right. Nếu không, WinForms sẽ tính khoảng cách anchor khi panel
+            // còn rộng mặc định 200px -> các control bị đẩy ra ngoài khung (mất nút Gửi/Trả lời/Chuyển tiếp).
+            panelTop.Width = ClientWidthAtDesign;
+
             panelLogo.Location = new Point(16, 16);
             panelLogo.Size = new Size(36, 36);
             panelLogo.Paint += PanelLogo_Paint;
 
-            lblTitle.Text = "Netizen Chat";
+            lblTitle.Text = "LTM-Group 11";
             lblTitle.Location = new Point(62, 15);
             lblTitle.Size = new Size(160, 20);
             lblTitle.Font = UiTheme.Font(10.5f, FontStyle.Bold);
@@ -187,15 +194,42 @@ namespace ChatClient
             btnSend = new ModernButton();
             btnReply = new ModernButton();
             btnForward = new ModernButton();
+            lblReplyPreview = new Label();
+            btnCancelReply = new ModernButton();
 
             panelBottom.Dock = DockStyle.Bottom;
             panelBottom.Height = 104;
             panelBottom.BackColor = UiTheme.WindowBg;
 
+            // Cùng lý do như panelTop: chốt Width trước khi thêm các control Anchor Right
+            panelBottom.Width = ClientWidthAtDesign;
+
             panelEmojis.Location = new Point(16, 10);
-            panelEmojis.Size = new Size(988, 34);
-            panelEmojis.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
+            panelEmojis.Size = new Size(496, 34);
+            panelEmojis.Anchor = AnchorStyles.Left | AnchorStyles.Top;
             panelEmojis.WrapContents = false;
+
+            // Thanh xem trước tin nhắn đang được trả lời (chỉ hiện khi bấm Trả lời)
+            lblReplyPreview.AutoSize = false;
+            lblReplyPreview.Location = new Point(520, 12);
+            lblReplyPreview.Size = new Size(428, 30);
+            lblReplyPreview.Anchor = AnchorStyles.Right | AnchorStyles.Top;
+            lblReplyPreview.TextAlign = ContentAlignment.MiddleLeft;
+            lblReplyPreview.Font = UiTheme.Font(8.5f, FontStyle.Italic);
+            lblReplyPreview.ForeColor = UiTheme.Accent;
+            lblReplyPreview.BackColor = UiTheme.AccentSoft;
+            lblReplyPreview.Padding = new Padding(8, 0, 4, 0);
+            lblReplyPreview.Text = "";
+            lblReplyPreview.Visible = false;
+
+            btnCancelReply.Text = "✕";
+            btnCancelReply.Primary = false;
+            btnCancelReply.CornerRadius = 6;
+            btnCancelReply.Location = new Point(952, 12);
+            btnCancelReply.Size = new Size(32, 30);
+            btnCancelReply.Font = UiTheme.Font(9f, FontStyle.Bold);
+            btnCancelReply.Anchor = AnchorStyles.Right | AnchorStyles.Top;
+            btnCancelReply.Visible = false;
 
             btnSend.Text = "Gửi  ➤";
             btnSend.Primary = true;
@@ -224,12 +258,12 @@ namespace ChatClient
 
             panelBottom.Controls.AddRange(new Control[]
             {
-                panelEmojis, msgInput, btnSend, btnReply, btnForward
+                panelEmojis, msgInput, btnSend, btnReply, btnForward, lblReplyPreview, btnCancelReply
             });
 
             // ===== Form chính =====
-            this.Text = "UDM_08 · Netizen Chat (TCP Client–Server)";
-            this.Size = new Size(1020, 700);
+            this.Text = "UDM_08 · LTM-Group 11 (TCP Client–Server)";
+            this.Size = new Size(FormWidthAtDesign, 700);
             this.MinimumSize = new Size(940, 620);
             this.StartPosition = FormStartPosition.CenterScreen;
             this.Font = UiTheme.Font(9.5f);
@@ -242,6 +276,11 @@ namespace ChatClient
             this.Controls.Add(panelBottom);
             this.Controls.Add(panelTop);
         }
+
+        // Kích thước form lúc thiết kế, và bề rộng vùng client tương ứng (trừ viền form).
+        // Dùng chung một nguồn để tránh lệch giữa vị trí control và kích thước form.
+        private const int FormWidthAtDesign = 1020;
+        private const int ClientWidthAtDesign = FormWidthAtDesign - 16;
 
         private static readonly Font LogoFont = new Font("Segoe UI Emoji", 13.5f);
 

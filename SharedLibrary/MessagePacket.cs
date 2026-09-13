@@ -23,6 +23,7 @@ namespace SharedLibrary
         public string Receiver { get; set; }        // Người nhận ("All" nếu là broadcast hoặc tên cụ thể)
         public string Content { get; set; }         // Nội dung tin nhắn chính
         public string ReplyToContent { get; set; }  // Nội dung tin nhắn đang được reply (nếu có)
+        public string ReplyToSender { get; set; }   // Tên người đã gửi tin nhắn đang được reply
         public string AvatarBase64 { get; set; }    // Ảnh đại diện dưới dạng chuỗi Base64
         public DateTime Timestamp { get; set; }     // Thời gian gửi tin
         public string MessageId { get; set; }       // Mã định danh duy nhất cho mỗi tin nhắn 

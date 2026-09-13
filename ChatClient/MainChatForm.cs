@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Linq;
+using System.Text.Json;
 using System.Windows.Forms;
 using SharedLibrary;
 
@@ -13,7 +15,6 @@ namespace ChatClient
         private string username = "";
         private string avatarBase64 = "";
         private Image myAvatar;
-        private string lastSelectedMessage = "";
         private bool isConnectedToServer = false;
         private bool formClosing = false;
 
@@ -54,7 +55,12 @@ namespace ChatClient
             btnSend.Click += BtnSend_Click;
             btnReply.Click += BtnReply_Click;
             btnForward.Click += BtnForward_Click;
+            btnCancelReply.Click += (s, e) => ClearSelectedMessage();
             txtMessage.KeyDown += TxtMessage_KeyDown;
+
+            // Chưa chọn tin nhắn nào -> ẩn thanh "đang trả lời"
+            ShowReplyPreview(false);
+
             this.FormClosing += MainChatForm_FormClosing;
             panelChat.Resize += PanelChat_Resize;
             this.Shown += (s, e) =>
@@ -127,6 +133,7 @@ namespace ChatClient
         {
             string content = txtMessage.Text.Trim();
             if (string.IsNullOrEmpty(content)) return;
+            if (!RequireConnection()) return;
 
             content = EmojiHelper.ParseEmojisFromText(content);
 
@@ -141,56 +148,118 @@ namespace ChatClient
 
             chatController.SendMessage(packet);
             AddBubble(packet, isMine: true);
-            lastSelectedMessage = content;
             txtMessage.Clear();
         }
 
+        /// <summary>
+        /// Trả lời tin nhắn đang được chọn: đính kèm nội dung + tên người gửi gốc
+        /// để bên nhận hiển thị được khối trích dẫn.
+        /// </summary>
         private void BtnReply_Click(object sender, EventArgs e)
         {
-            string content = txtMessage.Text.Trim();
-            if (string.IsNullOrEmpty(content)) return;
-            if (string.IsNullOrEmpty(lastSelectedMessage))
+            if (selectedBubble == null)
             {
                 MessageBox.Show("Hãy bấm chọn một tin nhắn trong khung chat để trả lời!");
                 return;
             }
 
+            string content = txtMessage.Text.Trim();
+            if (string.IsNullOrEmpty(content))
+            {
+                MessageBox.Show("Hãy nhập nội dung trả lời!");
+                txtMessage.Focus();
+                return;
+            }
+            if (!RequireConnection()) return;
+
             content = EmojiHelper.ParseEmojisFromText(content);
+            MessagePacket original = selectedBubble.Packet;
 
             MessagePacket packet = new MessagePacket
             {
                 Type = PacketType.Reply,
                 Sender = username,
-                Receiver = "All",
+                Receiver = ReplyTargetFor(original),
                 Content = content,
-                ReplyToContent = lastSelectedMessage,
+                ReplyToContent = original.Content,
+                ReplyToSender = original.Sender,
+                ReplyToMessageId = original.MessageId,
                 AvatarBase64 = avatarBase64
             };
 
             chatController.SendMessage(packet);
             AddBubble(packet, isMine: true);
             txtMessage.Clear();
+            ClearSelectedMessage();
         }
 
+        /// <summary>
+        /// Chuyển tiếp tin nhắn đang được chọn tới cả phòng hoặc một người dùng cụ thể.
+        /// </summary>
         private void BtnForward_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrEmpty(lastSelectedMessage))
+            if (selectedBubble == null)
             {
-                MessageBox.Show("Chưa có nội dung tin nhắn nào để chuyển tiếp!");
+                MessageBox.Show("Hãy bấm chọn một tin nhắn trong khung chat để chuyển tiếp!");
                 return;
             }
+            if (!RequireConnection()) return;
 
-            MessagePacket packet = new MessagePacket
+            MessagePacket original = selectedBubble.Packet;
+            List<string> members = contacts.Keys
+                .Where(n => !string.Equals(n, username, StringComparison.Ordinal))
+                .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            using (ForwardDialog dlg = new ForwardDialog(original.Sender, original.Content, members))
             {
-                Type = PacketType.Forward,
-                Sender = username,
-                Receiver = "All",
-                Content = lastSelectedMessage,
-                AvatarBase64 = avatarBase64
-            };
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
 
-            chatController.SendMessage(packet);
-            AddBubble(packet, isMine: true);
+                MessagePacket forward = new MessagePacket
+                {
+                    Type = PacketType.Forward,
+                    Sender = username,
+                    Receiver = dlg.SelectedTarget,
+                    Content = original.Content,
+                    OriginalSender = original.Sender,
+                    AvatarBase64 = avatarBase64
+                };
+
+                chatController.SendMessage(forward);
+                AddBubble(forward, isMine: true);
+
+                AddSystemNotice(dlg.ForwardToAll
+                    ? "Bạn đã chuyển tiếp tin nhắn tới cả phòng chat."
+                    : $"Bạn đã chuyển tiếp tin nhắn tới {dlg.SelectedTarget}.");
+            }
+
+            ClearSelectedMessage();
+        }
+
+        /// <summary>
+        /// Xác định người nhận của tin trả lời: nếu tin gốc là tin riêng thì trả lời
+        /// đúng người trong cuộc trò chuyện đó, ngược lại trả lời cả phòng.
+        /// </summary>
+        private string ReplyTargetFor(MessagePacket original)
+        {
+            string receiver = original.Receiver;
+            if (string.IsNullOrEmpty(receiver) ||
+                receiver.Equals("All", StringComparison.OrdinalIgnoreCase) ||
+                receiver.Equals("Server", StringComparison.OrdinalIgnoreCase))
+            {
+                return "All";
+            }
+
+            return string.Equals(original.Sender, username, StringComparison.Ordinal)
+                ? receiver
+                : original.Sender;
+        }
+
+        private bool RequireConnection()
+        {
+            if (isConnectedToServer) return true;
+            MessageBox.Show("Bạn cần kết nối đến Server trước!");
+            return false;
         }
 
         private void ChatController_OnMessageReceived(MessagePacket packet)
@@ -203,6 +272,18 @@ namespace ChatClient
 
             if (packet.Sender == username) return;
 
+            if (packet.Type == PacketType.UserListUpdate)
+            {
+                ApplyUserList(packet.Content);
+                return;
+            }
+
+            if (packet.Type == PacketType.System)
+            {
+                AddSystemNotice(packet.Content);
+                return;
+            }
+
             if (packet.Type == PacketType.Login)
             {
                 AddSystemNotice($"{packet.Sender} đã tham gia phòng chat.");
@@ -210,10 +291,60 @@ namespace ChatClient
             else
             {
                 AddBubble(packet, isMine: false);
-                // FIX #2 (giữ nguyên): không tự update lastSelectedMessage khi nhận tin nhắn
+                // Không tự đổi tin nhắn đang chọn khi nhận tin mới
             }
 
             AddOrUpdateContact(packet.Sender, packet.AvatarBase64);
+        }
+
+        /// <summary>
+        /// Đồng bộ danh sách liên hệ theo danh sách thành viên trực tuyến do Server gửi xuống.
+        /// </summary>
+        private void ApplyUserList(string json)
+        {
+            List<string> names;
+            try
+            {
+                names = JsonSerializer.Deserialize<List<string>>(json);
+            }
+            catch (JsonException)
+            {
+                return;
+            }
+            if (names == null) return;
+
+            foreach (string name in names)
+            {
+                if (string.IsNullOrEmpty(name) || string.Equals(name, username, StringComparison.Ordinal))
+                    continue;
+
+                if (!contacts.ContainsKey(name))
+                {
+                    AddOrUpdateContact(name, null);
+                }
+                else if (!contacts[name].IsOnline)
+                {
+                    contacts[name].IsOnline = true;
+                    if (contactControls.TryGetValue(name, out ContactControl ctrl))
+                        ctrl.Bind(contacts[name]);
+                }
+            }
+
+            // Ai không còn trong danh sách -> đánh dấu ngoại tuyến
+            foreach (var kv in contacts)
+            {
+                if (string.Equals(kv.Key, username, StringComparison.Ordinal)) continue;
+
+                bool online = names.Contains(kv.Key);
+                if (kv.Value.IsOnline != online)
+                {
+                    kv.Value.IsOnline = online;
+                    if (contactControls.TryGetValue(kv.Key, out ContactControl ctrl))
+                        ctrl.Bind(kv.Value);
+                }
+            }
+
+            flowContacts.Invalidate(true);
         }
 
         private void ChatController_OnDisconnected()
@@ -235,11 +366,12 @@ namespace ChatClient
             lblStatus.ForeColor = UiTheme.TextSecondary;
             picAvatar.Invalidate();
 
+            ClearSelectedMessage();
+
             foreach (ContactItem item in contacts.Values)
             {
                 item.IsOnline = false;
             }
-            // FIX #1 (giữ nguyên): Bind lại tất cả ContactControl thay vì chỉ Invalidate
             foreach (var ctrl in contactControls.Values)
             {
                 ctrl.Bind(ctrl.GetItem());
@@ -281,6 +413,8 @@ namespace ChatClient
 
         private void AddSystemNotice(string text)
         {
+            if (string.IsNullOrEmpty(text)) return;
+
             RemoveChatHint();
             Label notice = new Label
             {
@@ -299,12 +433,34 @@ namespace ChatClient
             ScrollChatToBottom();
         }
 
+        /// <summary>Chọn một bong bóng làm tin nhắn để Trả lời / Chuyển tiếp.</summary>
         private void SelectBubble(MessageBubble bubble)
         {
             if (selectedBubble != null) selectedBubble.Selected = false;
             selectedBubble = bubble;
             bubble.Selected = true;
-            lastSelectedMessage = bubble.Packet.Content;
+
+            string content = bubble.Packet.Content ?? "";
+            if (content.Length > 80) content = content.Substring(0, 80) + "…";
+            lblReplyPreview.Text = $"Đang chọn  ·  {bubble.Packet.Sender}: {content}";
+            ShowReplyPreview(true);
+        }
+
+        private void ClearSelectedMessage()
+        {
+            if (selectedBubble != null)
+            {
+                selectedBubble.Selected = false;
+                selectedBubble = null;
+            }
+            lblReplyPreview.Text = "";
+            ShowReplyPreview(false);
+        }
+
+        private void ShowReplyPreview(bool visible)
+        {
+            lblReplyPreview.Visible = visible;
+            btnCancelReply.Visible = visible;
         }
 
         private void ScrollChatToBottom()
@@ -350,7 +506,7 @@ namespace ChatClient
                 ctrl.Bind(item);
                 ctrl.Name = "contact_" + name;
                 flowContacts.Controls.Add(ctrl);
-                contactControls[name] = ctrl; // FIX #1 (giữ nguyên): lưu reference để cập nhật sau
+                contactControls[name] = ctrl; // lưu reference để cập nhật sau
             }
             else
             {
@@ -358,7 +514,6 @@ namespace ChatClient
                 Image newAvatar = avatarImage ?? (!string.IsNullOrEmpty(avatarB64) ? AvatarRenderer.FromBase64(avatarB64) : null);
                 if (newAvatar != null) item.Avatar = newAvatar;
 
-                // FIX #1 (giữ nguyên): gọi Bind để cập nhật UI
                 if (contactControls.TryGetValue(name, out ContactControl ctrl))
                 {
                     ctrl.Bind(item);
