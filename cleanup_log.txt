@@ -18,3 +18,29 @@
 [2026-09-21 14:35:43] [SafeClose] Đã đóng tài nguyên: NetworkStream (NetworkStream)
 [2026-09-21 14:35:43] === HOÀN TẤT. Giải phóng 0 đối tượng. Tiết kiệm: 276 KB RAM ===
 [2026-09-21 14:35:43] [SafeClose] Đã đóng tài nguyên: TcpClient (TcpClient)
+[2026-09-21 15:22:25] [Track] Đưa vào theo dõi tài nguyên: TcpClient
+[2026-09-21 15:22:25] [Track] Đưa vào theo dõi tài nguyên: NetworkStream
+[2026-09-21 15:22:53] [Track] Đưa vào theo dõi tài nguyên: TcpClient
+[2026-09-21 15:22:53] [Track] Đưa vào theo dõi tài nguyên: NetworkStream
+[2026-09-21 15:24:22] [SafeClose] Đã đóng tài nguyên: NetworkStream (NetworkStream)
+[2026-09-21 15:24:22] [SafeClose] Đã đóng tài nguyên: TcpClient (TcpClient)
+[2026-09-21 15:24:22]  BẮT ĐẦU GIẢI PHÓNG TOÀN BỘ TÀI NGUYÊN 
+[2026-09-21 15:24:22] [SafeClose] Đã đóng tài nguyên: NetworkStream (NetworkStream)
+[2026-09-21 15:24:22] [SafeClose] Đã đóng tài nguyên: TcpClient (TcpClient)
+[2026-09-21 15:24:22] === HOÀN TẤT. Giải phóng 0 đối tượng. Tiết kiệm: 818 KB RAM ===
+[2026-09-21 15:24:32] [SafeClose] Đã đóng tài nguyên: NetworkStream (NetworkStream)
+[2026-09-21 15:24:32] [SafeClose] Đã đóng tài nguyên: TcpClient (TcpClient)
+[2026-09-21 15:24:32] [SafeClose] Đã đóng tài nguyên: NetworkStream (NetworkStream)
+[2026-09-21 15:24:32] [SafeClose] Đã đóng tài nguyên: TcpClient (TcpClient)
+[2026-09-21 15:24:32]  BẮT ĐẦU GIẢI PHÓNG TOÀN BỘ TÀI NGUYÊN 
+[2026-09-21 15:24:32] === HOÀN TẤT. Giải phóng 0 đối tượng. Tiết kiệm: 1019 KB RAM ===
+[2026-09-21 15:29:09] [Track] Đưa vào theo dõi tài nguyên: TcpClient
+[2026-09-21 15:29:09] [Track] Đưa vào theo dõi tài nguyên: NetworkStream
+[2026-09-21 15:29:16] [Track] Đưa vào theo dõi tài nguyên: Bitmap
+[2026-09-21 15:29:31] [SafeClose] Đã đóng tài nguyên: NetworkStream (NetworkStream)
+[2026-09-21 15:29:31] [SafeClose] Đã đóng tài nguyên: TcpClient (TcpClient)
+[2026-09-21 15:29:31] [SafeClose] Đã đóng tài nguyên: NetworkStream (NetworkStream)
+[2026-09-21 15:29:31] [SafeClose] Đã đóng tài nguyên: TcpClient (TcpClient)
+[2026-09-21 15:29:31]  BẮT ĐẦU GIẢI PHÓNG TOÀN BỘ TÀI NGUYÊN 
+[2026-09-21 15:29:31] [DisposeAll] Đã giải phóng: Bitmap
+[2026-09-21 15:29:31] === HOÀN TẤT. Giải phóng 1 đối tượng. Tiết kiệm: 110582 KB RAM ===

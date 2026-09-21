@@ -25,7 +25,7 @@ namespace ChatServer
             serverThread.Start();
 
             ServerLogger.Log("Server đang chạy ngầm...");
-            ServerLogger.Log("Nhấn phím [Enter] hoặc gõ 'exit' rồi Enter để tắt Server.");
+            ServerLogger.Log("Nhấn phím gõ 'exit' rồi Enter để tắt Server.");
 
             string input;
             do
