@@ -1,0 +1,20 @@
+[2026-09-21 14:25:41] [Track] Đưa vào theo dõi tài nguyên: TcpClient
+[2026-09-21 14:25:41] [Track] Đưa vào theo dõi tài nguyên: NetworkStream
+[2026-09-21 14:26:40] [Track] Đưa vào theo dõi tài nguyên: TcpClient
+[2026-09-21 14:26:40] [Track] Đưa vào theo dõi tài nguyên: NetworkStream
+[2026-09-21 14:30:41] --- Bắt đầu dọn dẹp định kỳ (Auto Cleanup) ---
+[2026-09-21 14:30:41] [AutoCleanup] Đã thu hồi: 976 KB RAM.
+[2026-09-21 14:31:40] --- Bắt đầu dọn dẹp định kỳ (Auto Cleanup) ---
+[2026-09-21 14:31:40] [AutoCleanup] Đã thu hồi: 86 KB RAM.
+[2026-09-21 14:35:41] --- Bắt đầu dọn dẹp định kỳ (Auto Cleanup) ---
+[2026-09-21 14:35:41] [SafeClose] Đã đóng tài nguyên: NetworkStream (NetworkStream)
+[2026-09-21 14:35:41] [SafeClose] Đã đóng tài nguyên: NetworkStream (NetworkStream)
+[2026-09-21 14:35:41] [SafeClose] Đã đóng tài nguyên: TcpClient (TcpClient)
+[2026-09-21 14:35:41]  BẮT ĐẦU GIẢI PHÓNG TOÀN BỘ TÀI NGUYÊN 
+[2026-09-21 14:35:41] === HOÀN TẤT. Giải phóng 0 đối tượng. Tiết kiệm: 22 KB RAM ===
+[2026-09-21 14:35:43] [SafeClose] Đã đóng tài nguyên: NetworkStream (NetworkStream)
+[2026-09-21 14:35:43] [SafeClose] Đã đóng tài nguyên: TcpClient (TcpClient)
+[2026-09-21 14:35:43]  BẮT ĐẦU GIẢI PHÓNG TOÀN BỘ TÀI NGUYÊN 
+[2026-09-21 14:35:43] [SafeClose] Đã đóng tài nguyên: NetworkStream (NetworkStream)
+[2026-09-21 14:35:43] === HOÀN TẤT. Giải phóng 0 đối tượng. Tiết kiệm: 276 KB RAM ===
+[2026-09-21 14:35:43] [SafeClose] Đã đóng tài nguyên: TcpClient (TcpClient)
